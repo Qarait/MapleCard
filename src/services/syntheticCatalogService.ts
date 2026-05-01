@@ -1,5 +1,6 @@
 import type { CanonicalItem } from "../matchParsedLineToCanonical";
 import type { StoreProduct } from "../selectBestStore";
+import { toCatalogSchemaRecord } from "../catalog/catalogSchema";
 
 // Synthetic (in-memory) catalog used until a real DB/API integration exists.
 // IDs are deterministic so debugging is repeatable.
@@ -82,6 +83,10 @@ export function getSyntheticCanonicalItems(): CanonicalItem[] {
       aliases_json: ["rice", "white rice", "brown rice"],
     },
   ];
+}
+
+export function getSyntheticCatalogSchemaRecords() {
+  return getSyntheticCanonicalItems().map((item) => toCatalogSchemaRecord(item));
 }
 
 export function getSyntheticStoreProducts(): StoreProduct[] {

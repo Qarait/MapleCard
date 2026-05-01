@@ -105,6 +105,21 @@ Validation expectations:
 - Store products must include a store identifier, canonical item identifier, `price_cents`, `currency`, an availability indicator, and `attributes_json`.
 - Runtime validation is intentionally lightweight and TypeScript-based for now; MapleCard does not yet use a heavy schema-validation dependency at this boundary.
 
+## Canonical Catalog Schema Roadmap
+
+- MapleCard now has a code-managed canonical catalog schema module in `src/catalog/catalogSchema.ts`.
+- The current canonical catalog data is still synthetic and remains in-memory only.
+- Future DB-backed catalog storage should implement the same schema concepts rather than introducing a separate shape.
+- The schema currently models canonical items, attribute definitions, attribute options, quantity policy, clarification templates, item aliases, and category metadata.
+- Quantity policy is now explicit for schema planning purposes:
+	- eggs: countable
+	- bananas: countable
+	- chicken: ambiguous bare-number item with weight or package interpretation
+	- rice: ambiguous bare-number item with weight or package interpretation
+	- milk: volume-based
+- The parser is still rule-based today, but it should eventually read item attributes and quantity policy from the catalog schema instead of hardcoded parser rules.
+- Synthetic canonical items can now be projected into schema records and validated against the new schema expectations.
+
 ## CI
 
 - GitHub Actions CI is configured in `.github/workflows/ci.yml`.
