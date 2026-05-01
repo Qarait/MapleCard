@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getLastParserDiagnostics, parseShoppingList, resetLastParserDiagnostics } from "../src/parseShoppingList";
+import { logger } from "../src/utils/logger";
+import { parseShoppingList, parseShoppingListDetailed } from "../src/parseShoppingList";
 
 const ORIGINAL_ENV = { ...process.env };
 const ORIGINAL_FETCH = global.fetch;
-const ORIGINAL_WARN = console.warn;
 
 function ambiguousInput(count: number): string {
   return Array.from({ length: count }, (_, index) => `something for dinner ${index + 1}`).join("\n");
@@ -12,8 +12,6 @@ function ambiguousInput(count: number): string {
 afterEach(() => {
   process.env = { ...ORIGINAL_ENV };
   global.fetch = ORIGINAL_FETCH;
-  console.warn = ORIGINAL_WARN;
-  resetLastParserDiagnostics();
   vi.restoreAllMocks();
 });
 
@@ -24,33 +22,30 @@ describe("parseShoppingList OpenAI guardrails", () => {
     const fetchSpy = vi.fn();
     global.fetch = fetchSpy as typeof fetch;
 
-    const parsed = await parseShoppingList("something for dinner");
-    const diagnostics = getLastParserDiagnostics();
+    const result = await parseShoppingListDetailed("something for dinner");
 
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(parsed[0].lineType).toBe("meal_intent");
-    expect(diagnostics.parserMode).toBe("deterministic_only");
-    expect(diagnostics.llmEnabled).toBe(false);
-    expect(diagnostics.llmAttempted).toBe(false);
-    expect(diagnostics.llmFallbacks).toBe(1);
-    expect(diagnostics.llmSkippedReason).toBe("parser_mode_deterministic_only");
+    expect(result.parsedLines[0].lineType).toBe("meal_intent");
+    expect(result.diagnostics.parserMode).toBe("deterministic_only");
+    expect(result.diagnostics.llmEnabled).toBe(false);
+    expect(result.diagnostics.llmAttempted).toBe(false);
+    expect(result.diagnostics.llmFallbacks).toBe(1);
+    expect(result.diagnostics.llmSkippedReason).toBe("parser_mode_deterministic_only");
   });
 
   it("falls back safely in llm_assisted mode when OPENAI_API_KEY is missing", async () => {
     process.env.MAPLECARD_PARSER_MODE = "llm_assisted";
     delete process.env.OPENAI_API_KEY;
-    const warnSpy = vi.fn();
-    console.warn = warnSpy;
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
 
-    const parsed = await parseShoppingList("something for dinner");
-    const diagnostics = getLastParserDiagnostics();
+    const result = await parseShoppingListDetailed("something for dinner");
 
-    expect(parsed[0].canonicalQuery).toBe("meal");
-    expect(diagnostics.parserMode).toBe("llm_assisted");
-    expect(diagnostics.llmEnabled).toBe(false);
-    expect(diagnostics.llmAttempted).toBe(false);
-    expect(diagnostics.llmFallbacks).toBe(1);
-    expect(diagnostics.llmSkippedReason).toBe("missing_openai_api_key");
+    expect(result.parsedLines[0].canonicalQuery).toBe("meal");
+    expect(result.diagnostics.parserMode).toBe("llm_assisted");
+    expect(result.diagnostics.llmEnabled).toBe(false);
+    expect(result.diagnostics.llmAttempted).toBe(false);
+    expect(result.diagnostics.llmFallbacks).toBe(1);
+    expect(result.diagnostics.llmSkippedReason).toBe("missing_openai_api_key");
     expect(warnSpy).toHaveBeenCalled();
   });
 
@@ -67,14 +62,13 @@ describe("parseShoppingList OpenAI guardrails", () => {
       });
     }) as typeof fetch;
 
-    const parsed = await parseShoppingList("something for dinner");
-    const diagnostics = getLastParserDiagnostics();
+    const result = await parseShoppingListDetailed("something for dinner");
 
-    expect(parsed[0].canonicalQuery).toBe("meal");
-    expect(diagnostics.llmAttempted).toBe(true);
-    expect(diagnostics.llmCalls).toBe(1);
-    expect(diagnostics.llmFallbacks).toBe(1);
-    expect(diagnostics.warnings.some((warning) => warning.includes("timed out"))).toBe(true);
+    expect(result.parsedLines[0].canonicalQuery).toBe("meal");
+    expect(result.diagnostics.llmAttempted).toBe(true);
+    expect(result.diagnostics.llmCalls).toBe(1);
+    expect(result.diagnostics.llmFallbacks).toBe(1);
+    expect(result.diagnostics.warnings.some((warning) => warning.includes("timed out"))).toBe(true);
   });
 
   it("caps ambiguous meal-intent batches and falls back for overflow", async () => {
@@ -126,15 +120,25 @@ describe("parseShoppingList OpenAI guardrails", () => {
       );
     }) as typeof fetch;
 
-    const parsed = await parseShoppingList(ambiguousInput(3));
-    const diagnostics = getLastParserDiagnostics();
+    const result = await parseShoppingListDetailed(ambiguousInput(3));
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
-    expect(parsed[0].canonicalQuery).toBe("chicken");
-    expect(parsed[1].canonicalQuery).toBe("rice");
-    expect(parsed[2].canonicalQuery).toBe("meal");
-    expect(diagnostics.llmCalls).toBe(1);
-    expect(diagnostics.llmFallbacks).toBe(1);
-    expect(diagnostics.llmSkippedReason).toBe("openai_batch_overflow");
+    expect(result.parsedLines[0].canonicalQuery).toBe("chicken");
+    expect(result.parsedLines[1].canonicalQuery).toBe("rice");
+    expect(result.parsedLines[2].canonicalQuery).toBe("meal");
+    expect(result.diagnostics.llmCalls).toBe(1);
+    expect(result.diagnostics.llmFallbacks).toBe(1);
+    expect(result.diagnostics.llmSkippedReason).toBe("openai_batch_overflow");
+  });
+
+  it("returns diagnostics per call without exposing them from parseShoppingList", async () => {
+    process.env.MAPLECARD_PARSER_MODE = "deterministic_only";
+
+    const publicResult = await parseShoppingList("milk");
+    const detailedResult = await parseShoppingListDetailed("something for dinner");
+
+    expect(Array.isArray(publicResult)).toBe(true);
+    expect((publicResult as unknown as { diagnostics?: unknown }).diagnostics).toBeUndefined();
+    expect(detailedResult.diagnostics.parserMode).toBe("deterministic_only");
   });
 });

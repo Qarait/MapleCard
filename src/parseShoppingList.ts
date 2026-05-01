@@ -1,3 +1,5 @@
+import { logger } from "./utils/logger";
+
 export type ParsedLine = {
   rawText: string;
   lineType: "exact_item" | "category_request" | "meal_intent" | "unknown";
@@ -438,20 +440,15 @@ export type ParserDiagnostics = {
   warnings: string[];
 };
 
+export type ParseShoppingListResult = {
+  parsedLines: ParsedLine[];
+  diagnostics: ParserDiagnostics;
+};
+
 const DEFAULT_LLM_FALLBACK_SUGGESTIONS = ["chicken", "rice", "eggs"];
 const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
 const DEFAULT_OPENAI_TIMEOUT_MS = 5000;
 const DEFAULT_OPENAI_MAX_BATCH_ITEMS = 20;
-
-let lastParserDiagnostics: ParserDiagnostics = {
-  parserMode: "deterministic_only",
-  llmEnabled: false,
-  llmAttempted: false,
-  llmCalls: 0,
-  llmFallbacks: 0,
-  llmSkippedReason: "parser_mode_deterministic_only",
-  warnings: [],
-};
 
 function buildFallbackParsedLine(rawText: string): ParsedLine {
   return buildParsedLineBase(rawText, {
@@ -474,7 +471,7 @@ function makeFallbackResults(lines: { index: number; rawText: string }[]): { ind
 
 function pushParserWarning(diagnostics: ParserDiagnostics, warning: string) {
   diagnostics.warnings.push(warning);
-  console.warn(`[MapleCard parser] ${warning}`);
+  logger.warn(`[MapleCard parser] ${warning}`);
 }
 
 function parsePositiveIntegerEnv(rawValue: string | undefined, fallback: number, diagnostics: ParserDiagnostics, envName: string): number {
@@ -504,25 +501,6 @@ function getOpenAIConfig(diagnostics: ParserDiagnostics) {
     model: process.env.OPENAI_MODEL ?? DEFAULT_OPENAI_MODEL,
     timeoutMs: parsePositiveIntegerEnv(process.env.OPENAI_TIMEOUT_MS, DEFAULT_OPENAI_TIMEOUT_MS, diagnostics, "OPENAI_TIMEOUT_MS"),
     maxBatchItems: parsePositiveIntegerEnv(process.env.OPENAI_MAX_BATCH_ITEMS, DEFAULT_OPENAI_MAX_BATCH_ITEMS, diagnostics, "OPENAI_MAX_BATCH_ITEMS"),
-  };
-}
-
-export function getLastParserDiagnostics(): ParserDiagnostics {
-  return {
-    ...lastParserDiagnostics,
-    warnings: [...lastParserDiagnostics.warnings],
-  };
-}
-
-export function resetLastParserDiagnostics() {
-  lastParserDiagnostics = {
-    parserMode: "deterministic_only",
-    llmEnabled: false,
-    llmAttempted: false,
-    llmCalls: 0,
-    llmFallbacks: 0,
-    llmSkippedReason: "parser_mode_deterministic_only",
-    warnings: [],
   };
 }
 
@@ -689,7 +667,7 @@ async function callOpenAIForAmbiguousLines(args: {
   });
 }
 
-export async function parseShoppingList(rawInput: string): Promise<ParsedLine[]> {
+export async function parseShoppingListDetailed(rawInput: string): Promise<ParseShoppingListResult> {
   const diagnostics: ParserDiagnostics = {
     parserMode: "deterministic_only",
     llmEnabled: false,
@@ -831,10 +809,17 @@ export async function parseShoppingList(rawInput: string): Promise<ParsedLine[]>
   }
 
   // Final safety: ensure return is structured JSON (objects only).
-  lastParserDiagnostics = {
-    ...diagnostics,
-    warnings: [...diagnostics.warnings],
+  return {
+    parsedLines: parsed,
+    diagnostics: {
+      ...diagnostics,
+      warnings: [...diagnostics.warnings],
+    },
   };
-  return parsed;
+}
+
+export async function parseShoppingList(rawInput: string): Promise<ParsedLine[]> {
+  const result = await parseShoppingListDetailed(rawInput);
+  return result.parsedLines;
 }
 
