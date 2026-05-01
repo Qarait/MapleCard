@@ -116,7 +116,7 @@ Validation expectations:
 	- bananas: countable
 	- chicken: ambiguous bare-number item with weight or package interpretation
 	- rice: ambiguous bare-number item with weight or package interpretation
-	- milk: volume-based
+	- milk: volume-based, but bare-number milk input should still require clarification unless a unit is present
 - The parser is still rule-based today, but it should eventually read item attributes and quantity policy from the catalog schema instead of hardcoded parser rules.
 - Synthetic canonical items can now be projected into schema records and validated against the new schema expectations.
 

@@ -72,7 +72,7 @@ export const SYNTHETIC_QUANTITY_POLICIES: Record<string, QuantityPolicy> = {
   milk: {
     kind: "volume_based_item",
     defaultUnit: "l",
-    bareNumberInterpretation: "volume",
+    bareNumberInterpretation: "ambiguous",
   },
   eggs: {
     kind: "countable_item",

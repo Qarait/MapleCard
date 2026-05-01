@@ -47,8 +47,17 @@ describe("catalog schema readiness", () => {
     expect(bySlug.get("eggs")?.quantityPolicy.kind).toBe("countable_item");
     expect(bySlug.get("banana")?.quantityPolicy.kind).toBe("countable_item");
     expect(bySlug.get("milk")?.quantityPolicy.kind).toBe("volume_based_item");
+    expect(bySlug.get("milk")?.quantityPolicy.bareNumberInterpretation).toBe("ambiguous");
     expect(bySlug.get("chicken")?.quantityPolicy.kind).toBe("ambiguous_bare_number_item");
     expect(bySlug.get("rice")?.quantityPolicy.kind).toBe("ambiguous_bare_number_item");
+  });
+
+  it("keeps bare-number milk ambiguous even though milk is volume-based", () => {
+    const milk = getSyntheticCatalogSchemaRecords().find((record) => record.slug === "milk");
+
+    expect(milk?.quantityPolicy.kind).toBe("volume_based_item");
+    expect(milk?.quantityPolicy.bareNumberInterpretation).toBe("ambiguous");
+    expect(milk?.quantityPolicy.bareNumberInterpretation).not.toBe("volume");
   });
 
   it("detects unsafe alias collisions", () => {
