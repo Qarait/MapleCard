@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { OptimizeServiceError } from "../services/optimizeServiceError";
 import { optimizeShopping } from "../services/optimizeService";
 
 type ValidationError = {
@@ -78,7 +79,22 @@ export async function optimizeController(req: Request, res: Response) {
     const result = await optimizeShopping(rawInput);
     res.json(result);
   } catch (err: any) {
-    res.status(500).json({ error: "Optimization failed", details: String(err?.message ?? err) });
+    if (err instanceof OptimizeServiceError) {
+      res.status(err.statusCode).json({
+        error: {
+          code: err.code,
+          message: err.message,
+        },
+      });
+      return;
+    }
+
+    res.status(500).json({
+      error: {
+        code: "optimization_failed",
+        message: "Optimization failed.",
+      },
+    });
   }
 }
 

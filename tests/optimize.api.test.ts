@@ -1,6 +1,8 @@
 import request from "supertest";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { app } from "../src/app";
+import { OptimizeServiceError } from "../src/services/optimizeServiceError";
+import * as optimizeService from "../src/services/optimizeService";
 
 const ORIGINAL_ENV = { ...process.env };
 
@@ -52,5 +54,27 @@ describe("optimize API validation", () => {
     expect(response.status).toBe(400);
     expect(response.body.error.code).toBe("raw_input_too_long");
     expect(response.body.error.details.actualLength).toBe(10001);
+  });
+
+  it("returns a controlled provider error without leaking internal details", async () => {
+    const optimizeShoppingSpy = vi
+      .spyOn(optimizeService, "optimizeShopping")
+      .mockRejectedValue(
+        new OptimizeServiceError("catalog_provider_failed", "Catalog provider is currently unavailable.", 503)
+      );
+
+    const response = await request(app)
+      .post("/api/optimize")
+      .send({ rawInput: "milk" });
+
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({
+      error: {
+        code: "catalog_provider_failed",
+        message: "Catalog provider is currently unavailable.",
+      },
+    });
+
+    optimizeShoppingSpy.mockRestore();
   });
 });

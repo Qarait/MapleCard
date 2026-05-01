@@ -20,6 +20,15 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 6. `optimizeService` resolves catalog and inventory data through provider interfaces, which currently use synthetic in-memory providers.
 7. Clarification questions are generated for low-confidence or user-choice-required cases.
 
+## Provider Reliability
+
+- Provider failures are handled at the service boundary before they reach API users.
+- Canonical catalog provider failures and store inventory provider failures are converted into controlled service errors.
+- Empty provider payloads are treated as controlled upstream failures rather than allowing the optimization pipeline to continue with missing catalog state.
+- Invalid provider payloads are rejected by lightweight runtime validation before matching or scoring runs.
+- Internal provider diagnostics currently track canonical item count, store product count, provider failure reason, and provider validation failure count.
+- Provider diagnostics are internal only and currently flow through the logger wrapper.
+
 ## Store Scoring Configuration
 
 - Store ranking weights are defined in `src/config/storeScoringConfig.ts`
@@ -91,10 +100,23 @@ Expected store product or inventory shape:
 
 - Current provider-backed data is still synthetic; no real database or retailer API integration has been added.
 
+Validation expectations:
+- Canonical items must include `id`, `display_name`, `category`, and `attribute_schema_json`.
+- Store products must include a store identifier, canonical item identifier, `price_cents`, `currency`, an availability indicator, and `attributes_json`.
+- Runtime validation is intentionally lightweight and TypeScript-based for now; MapleCard does not yet use a heavy schema-validation dependency at this boundary.
+
+## CI
+
+- GitHub Actions CI is configured in `.github/workflows/ci.yml`.
+- CI runs on `push` and `pull_request`.
+- The workflow runs `npm ci`, `npm run build`, and `npm test`.
+- CI verifies the current TypeScript build and test suite only; it does not add any real database or retailer integration.
+
 ## Production Risks
 
 - OpenAI dependency: ambiguous meal-intent parsing can call the OpenAI Chat Completions API only when `MAPLECARD_PARSER_MODE=llm_assisted` and `OPENAI_API_KEY` is set.
 - Synthetic catalog/store data: optimization currently runs on mock in-memory data from `syntheticCatalogService`.
+- Provider-backed catalog access is now more defensive, but real upstream reliability concerns like retries, timeouts, and partial data recovery are still not implemented.
 - Hardcoded parser schema: known items, attribute schemas, aliases, and category suggestions are embedded in code.
 - Scoring weights are versioned in code, but they are still code-configured rather than externally managed.
 - Attribute normalization aliases are conservative and code-managed today; a real production schema should eventually be DB-driven.

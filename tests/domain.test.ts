@@ -4,6 +4,7 @@ import { generateClarificationQuestions } from "../src/generateClarificationQues
 import { createCanonicalMatcher } from "../src/matchParsedLineToCanonical";
 import { selectBestStore, selectBestStoreWithAlternatives } from "../src/selectBestStore";
 import type { CanonicalCatalogProvider, StoreInventoryProvider } from "../src/services/catalogProvider";
+import { OptimizeServiceError } from "../src/services/optimizeServiceError";
 import { optimizeShopping, DEFAULT_CATALOG_PROVIDERS } from "../src/services/optimizeService";
 import { syntheticCanonicalCatalogProvider, syntheticStoreInventoryProvider } from "../src/services/syntheticCatalogProvider";
 import { getSyntheticCanonicalItems, getSyntheticStoreProducts } from "../src/services/syntheticCatalogService";
@@ -493,5 +494,106 @@ describe("domain behavior", () => {
     expect(result.items).toHaveLength(1);
     expect(result.winner.retailerKey).toBeTruthy();
     expect(Object.keys(result)).toEqual(["items", "winner", "alternatives", "clarifications"]);
+  });
+
+  it("surfaces a controlled error when the catalog provider rejects", async () => {
+    const providers = {
+      canonicalCatalogProvider: {
+        getCanonicalItems: vi.fn(async () => {
+          throw new Error("catalog secret");
+        }),
+      },
+      storeInventoryProvider: syntheticStoreInventoryProvider,
+    };
+
+    await expect(optimizeShopping("milk", providers)).rejects.toMatchObject<Partial<OptimizeServiceError>>({
+      code: "catalog_provider_failed",
+      statusCode: 503,
+      message: "Catalog provider is currently unavailable.",
+    });
+  });
+
+  it("surfaces a controlled error when the inventory provider rejects", async () => {
+    const providers = {
+      canonicalCatalogProvider: syntheticCanonicalCatalogProvider,
+      storeInventoryProvider: {
+        getStoreProducts: vi.fn(async () => {
+          throw new Error("inventory secret");
+        }),
+      },
+    };
+
+    await expect(optimizeShopping("milk", providers)).rejects.toMatchObject<Partial<OptimizeServiceError>>({
+      code: "inventory_provider_failed",
+      statusCode: 503,
+      message: "Store inventory provider is currently unavailable.",
+    });
+  });
+
+  it("surfaces a controlled error when the catalog provider returns no items", async () => {
+    const providers = {
+      canonicalCatalogProvider: {
+        getCanonicalItems: vi.fn(async () => []),
+      },
+      storeInventoryProvider: syntheticStoreInventoryProvider,
+    };
+
+    await expect(optimizeShopping("milk", providers)).rejects.toMatchObject<Partial<OptimizeServiceError>>({
+      code: "empty_canonical_catalog",
+      statusCode: 503,
+    });
+  });
+
+  it("surfaces a controlled error when the inventory provider returns no products", async () => {
+    const providers = {
+      canonicalCatalogProvider: syntheticCanonicalCatalogProvider,
+      storeInventoryProvider: {
+        getStoreProducts: vi.fn(async () => []),
+      },
+    };
+
+    await expect(optimizeShopping("milk", providers)).rejects.toMatchObject<Partial<OptimizeServiceError>>({
+      code: "empty_store_inventory",
+      statusCode: 503,
+    });
+  });
+
+  it("surfaces a controlled error for invalid canonical item payloads", async () => {
+    const providers = {
+      canonicalCatalogProvider: {
+        getCanonicalItems: vi.fn(async () => [
+          {
+            id: "bad-item",
+            display_name: "Bad Item",
+          },
+        ]),
+      },
+      storeInventoryProvider: syntheticStoreInventoryProvider,
+    };
+
+    await expect(optimizeShopping("milk", providers)).rejects.toMatchObject<Partial<OptimizeServiceError>>({
+      code: "invalid_canonical_catalog",
+      statusCode: 502,
+    });
+  });
+
+  it("surfaces a controlled error for invalid store product payloads", async () => {
+    const providers = {
+      canonicalCatalogProvider: syntheticCanonicalCatalogProvider,
+      storeInventoryProvider: {
+        getStoreProducts: vi.fn(async () => [
+          {
+            store_id: "bad-store",
+            canonical_item_id: getSyntheticCanonicalItems()[0].id,
+            price_cents: 100,
+          },
+        ]),
+      },
+    };
+
+    await expect(optimizeShopping("milk", providers)).rejects.toMatchObject<Partial<OptimizeServiceError>>({
+      code: "invalid_store_inventory",
+      statusCode: 502,
+    });
   });
 });
