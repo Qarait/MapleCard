@@ -126,6 +126,8 @@ Validation expectations:
 - The seed is MapleCard-owned and uses generic grocery concepts only; it is not copied from Open Food Facts, USDA, CNF, Instacart, Kroger, or retailer product data.
 - The current seed includes common grocery concepts across dairy, eggs, produce, meat, seafood, pantry, bakery, frozen, beverages, and household basics.
 - The seed is schema-validated through the Sprint 6 catalog schema helpers and is intended to become the stable internal catalog truth before any database is added.
+- MapleCard also includes a seed catalog adapter in `src/services/seedCatalogProvider.ts` that can project the seed into the runtime `CanonicalItem` provider shape.
+- The seed catalog is being adapted toward runtime use, but the synthetic provider remains the default runtime catalog source until store inventory compatibility is solved.
 - Open Food Facts, USDA, and CNF remain possible future enrichment sources only; they are not the current source of truth.
 - Store price, store inventory, and ETA data are still synthetic today and are not yet backed by real retailer integrations.
 
