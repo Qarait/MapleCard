@@ -17,7 +17,7 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 3. Parsing uses deterministic parser rules first, plus an optional OpenAI path for ambiguous meal-intent lines.
 4. `matchParsedLineToCanonical` performs token-based and Jaccard-style matching against canonical items.
 5. `optimizeService` uses `selectBestStoreWithAlternatives` to produce a winning store and alternative store options.
-6. `syntheticCatalogService` is the current mock canonical-item and store-product data source.
+6. `optimizeService` resolves catalog and inventory data through provider interfaces, which currently use synthetic in-memory providers.
 7. Clarification questions are generated for low-confidence or user-choice-required cases.
 
 ## Store Scoring Configuration
@@ -64,7 +64,32 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 - Store scoring returns both a `winner` and `alternatives`.
 - Missing store ETA values are returned as `null`, not `0`.
 - Stores with missing ETA are penalized during scoring using internal defaulted ETA metadata, but unknown ETA is still surfaced as `null` in the response.
-- The service is currently backed by synthetic in-memory catalog and store data.
+- The service is currently backed by synthetic in-memory catalog and store data through provider adapters.
+
+## Catalog and Inventory Provider Contracts
+
+- MapleCard currently uses provider interfaces in `src/services/catalogProvider.ts` to separate the optimization pipeline from any concrete catalog source.
+- The active implementation is still synthetic and lives behind `src/services/syntheticCatalogProvider.ts`.
+
+Expected canonical item shape:
+- `id`: stable canonical item identifier
+- `name`: current code uses `display_name` for the human-readable canonical name
+- `category`: canonical category used by matcher and downstream ranking
+- `attribute schema`: current code uses `attribute_schema_json`
+- `default attributes`: current code uses `default_attributes_json` when applicable
+- `clarification options`: currently derived from `attribute_schema_json` and alias data when applicable
+
+Expected store product or inventory shape:
+- `store id`: current code uses `store_id` or `storeId`
+- `retailer key`: current code uses `retailerKey`
+- `canonical item id`: current code uses `canonical_item_id` or `canonicalItemId`
+- `price cents`: current code uses `price_cents`
+- `currency`: current code uses `currency`
+- `availability / stock status`: current code uses `availability_status`, `in_stock`, and optional metadata
+- `ETA`: current code uses `eta_min`, `etaMin`, or metadata-derived ETA
+- `attributes`: current code uses `attributes_json`
+
+- Current provider-backed data is still synthetic; no real database or retailer API integration has been added.
 
 ## Production Risks
 

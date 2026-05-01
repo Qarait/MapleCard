@@ -1,8 +1,11 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_STORE_SCORING_CONFIG } from "../src/config/storeScoringConfig";
 import { generateClarificationQuestions } from "../src/generateClarificationQuestions";
 import { createCanonicalMatcher } from "../src/matchParsedLineToCanonical";
 import { selectBestStore, selectBestStoreWithAlternatives } from "../src/selectBestStore";
+import type { CanonicalCatalogProvider, StoreInventoryProvider } from "../src/services/catalogProvider";
+import { optimizeShopping, DEFAULT_CATALOG_PROVIDERS } from "../src/services/optimizeService";
+import { syntheticCanonicalCatalogProvider, syntheticStoreInventoryProvider } from "../src/services/syntheticCatalogProvider";
 import { getSyntheticCanonicalItems, getSyntheticStoreProducts } from "../src/services/syntheticCatalogService";
 
 const ORIGINAL_WEIGHTS = { ...DEFAULT_STORE_SCORING_CONFIG.weights };
@@ -420,5 +423,75 @@ describe("domain behavior", () => {
     );
 
     expect(results.every((result) => result.matchConfidence > 0.6)).toBe(true);
+  });
+
+  it("synthetic canonical catalog provider returns canonical items", async () => {
+    const items = await syntheticCanonicalCatalogProvider.getCanonicalItems();
+
+    expect(items.length).toBeGreaterThan(0);
+    expect(items[0]).toEqual(
+      expect.objectContaining({
+        id: expect.any(String),
+        display_name: expect.any(String),
+        category: expect.any(String),
+        attribute_schema_json: expect.any(Object),
+      })
+    );
+  });
+
+  it("synthetic store inventory provider returns store products", async () => {
+    const products = await syntheticStoreInventoryProvider.getStoreProducts();
+
+    expect(products.length).toBeGreaterThan(0);
+    expect(products[0]).toEqual(
+      expect.objectContaining({
+        store_id: expect.any(String),
+        canonical_item_id: expect.any(String),
+        price_cents: expect.any(Number),
+      })
+    );
+  });
+
+  it("optimizeService works through the default synthetic providers", async () => {
+    const canonicalSpy = vi.spyOn(DEFAULT_CATALOG_PROVIDERS.canonicalCatalogProvider, "getCanonicalItems");
+    const inventorySpy = vi.spyOn(DEFAULT_CATALOG_PROVIDERS.storeInventoryProvider, "getStoreProducts");
+
+    const result = await optimizeShopping("2% milk\neggs");
+
+    expect(canonicalSpy).toHaveBeenCalledTimes(1);
+    expect(inventorySpy).toHaveBeenCalledTimes(1);
+    expect(result).toEqual(
+      expect.objectContaining({
+        items: expect.any(Array),
+        winner: expect.any(Object),
+        alternatives: expect.any(Array),
+        clarifications: expect.any(Array),
+      })
+    );
+
+    canonicalSpy.mockRestore();
+    inventorySpy.mockRestore();
+  });
+
+  it("optimizeService can run against injected providers instead of raw synthetic service calls", async () => {
+    const canonicalCatalogProvider: CanonicalCatalogProvider = {
+      getCanonicalItems: vi.fn(async () => [getSyntheticCanonicalItems()[0]]),
+    };
+    const storeInventoryProvider: StoreInventoryProvider = {
+      getStoreProducts: vi.fn(async () =>
+        getSyntheticStoreProducts().filter((product) => product.canonical_item_id === getSyntheticCanonicalItems()[0].id)
+      ),
+    };
+
+    const result = await optimizeShopping("milk", {
+      canonicalCatalogProvider,
+      storeInventoryProvider,
+    });
+
+    expect(canonicalCatalogProvider.getCanonicalItems).toHaveBeenCalledTimes(1);
+    expect(storeInventoryProvider.getStoreProducts).toHaveBeenCalledTimes(1);
+    expect(result.items).toHaveLength(1);
+    expect(result.winner.retailerKey).toBeTruthy();
+    expect(Object.keys(result)).toEqual(["items", "winner", "alternatives", "clarifications"]);
   });
 });

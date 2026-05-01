@@ -4,7 +4,8 @@ import type { CanonicalMatch } from "../matchParsedLineToCanonical";
 import { selectBestStoreWithAlternatives } from "../selectBestStore";
 import type { SelectedStoreResult } from "../selectBestStore";
 import { generateClarificationQuestions } from "../generateClarificationQuestions";
-import { getSyntheticCanonicalItems, getSyntheticStoreProducts } from "./syntheticCatalogService";
+import type { CatalogProviders } from "./catalogProvider";
+import { syntheticCanonicalCatalogProvider, syntheticStoreInventoryProvider } from "./syntheticCatalogProvider";
 
 export type OptimizeResponse = {
   items: Array<{
@@ -24,14 +25,22 @@ export type OptimizeResponse = {
   clarifications: Array<{ rawText: string; question: string; options: string[] }>;
 };
 
-export async function optimizeShopping(rawInput: string): Promise<OptimizeResponse> {
+export const DEFAULT_CATALOG_PROVIDERS: CatalogProviders = {
+  canonicalCatalogProvider: syntheticCanonicalCatalogProvider,
+  storeInventoryProvider: syntheticStoreInventoryProvider,
+};
+
+export async function optimizeShopping(
+  rawInput: string,
+  providers: CatalogProviders = DEFAULT_CATALOG_PROVIDERS
+): Promise<OptimizeResponse> {
   const parsedLines = await parseShoppingList(rawInput);
 
-  const canonicalItems = getSyntheticCanonicalItems();
+  const canonicalItems = await providers.canonicalCatalogProvider.getCanonicalItems();
   const matchParsedLineToCanonical = createCanonicalMatcher(canonicalItems);
 
   const matches = parsedLines.map((pl) => matchParsedLineToCanonical(pl));
-  const storeProducts = getSyntheticStoreProducts();
+  const storeProducts = await providers.storeInventoryProvider.getStoreProducts();
 
   const { winner, alternatives } = selectBestStoreWithAlternatives(matches, storeProducts);
 
