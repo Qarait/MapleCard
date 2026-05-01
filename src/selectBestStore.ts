@@ -126,8 +126,11 @@ function computeSubstitutionRisk(matches: CanonicalMatch[], covered: CanonicalMa
 }
 
 function combineSubstitutionRisk(baseRisk: number, avgAttributeCompatibility: number): number {
+  const blend = DEFAULT_STORE_SCORING_CONFIG.substitutionRiskBlend;
   const attributeMismatchRisk = clamp01(1 - avgAttributeCompatibility);
-  return clamp01(baseRisk * 0.7 + attributeMismatchRisk * 0.3);
+  return clamp01(
+    baseRisk * clamp01(blend.baseRisk) + attributeMismatchRisk * clamp01(blend.attributeMismatchRisk)
+  );
 }
 
 function computeStoreAttributesCompatibility(requestedAttributes: Record<string, any>, storeAttributes: any): number {

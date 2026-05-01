@@ -6,6 +6,7 @@ import { selectBestStore, selectBestStoreWithAlternatives } from "../src/selectB
 import { getSyntheticCanonicalItems, getSyntheticStoreProducts } from "../src/services/syntheticCatalogService";
 
 const ORIGINAL_WEIGHTS = { ...DEFAULT_STORE_SCORING_CONFIG.weights };
+const ORIGINAL_SUBSTITUTION_RISK_BLEND = { ...DEFAULT_STORE_SCORING_CONFIG.substitutionRiskBlend };
 
 afterEach(() => {
   DEFAULT_STORE_SCORING_CONFIG.weights.coverage = ORIGINAL_WEIGHTS.coverage;
@@ -13,6 +14,8 @@ afterEach(() => {
   DEFAULT_STORE_SCORING_CONFIG.weights.price = ORIGINAL_WEIGHTS.price;
   DEFAULT_STORE_SCORING_CONFIG.weights.eta = ORIGINAL_WEIGHTS.eta;
   DEFAULT_STORE_SCORING_CONFIG.weights.substitutionRisk = ORIGINAL_WEIGHTS.substitutionRisk;
+  DEFAULT_STORE_SCORING_CONFIG.substitutionRiskBlend.baseRisk = ORIGINAL_SUBSTITUTION_RISK_BLEND.baseRisk;
+  DEFAULT_STORE_SCORING_CONFIG.substitutionRiskBlend.attributeMismatchRisk = ORIGINAL_SUBSTITUTION_RISK_BLEND.attributeMismatchRisk;
 });
 
 describe("domain behavior", () => {
@@ -107,6 +110,60 @@ describe("domain behavior", () => {
 
     expect(baselineWinner.retailerKey).toBe("store-cheap-missing-eta");
     expect(etaWeightedWinner.retailerKey).toBe("store-known-eta");
+  });
+
+  it("uses the configured substitution-risk blend at runtime", () => {
+    const matches = [
+      {
+        canonicalItemId: "milk",
+        resolvedName: "Milk",
+        matchConfidence: 0.4,
+        usedDefault: true,
+        lowConfidence: true,
+        needsClarification: false,
+        clarificationSuggestions: [],
+        requestedAttributes: { organic: true },
+      },
+    ];
+    const storeProducts = [
+      {
+        store_id: "exact-match-expensive-store",
+        retailerKey: "exact-match-expensive-store",
+        canonical_item_id: "milk",
+        price_cents: 130,
+        availability_status: "in_stock",
+        in_stock: true,
+        eta_min: 10,
+        attributes_json: { organic: true },
+      },
+      {
+        store_id: "attribute-mismatch-cheap-store",
+        retailerKey: "attribute-mismatch-cheap-store",
+        canonical_item_id: "milk",
+        price_cents: 100,
+        availability_status: "in_stock",
+        in_stock: true,
+        eta_min: 10,
+        attributes_json: { organic: false },
+      },
+    ];
+
+    DEFAULT_STORE_SCORING_CONFIG.weights.coverage = 0;
+    DEFAULT_STORE_SCORING_CONFIG.weights.matchConfidence = 0;
+    DEFAULT_STORE_SCORING_CONFIG.weights.price = 1;
+    DEFAULT_STORE_SCORING_CONFIG.weights.eta = 0;
+    DEFAULT_STORE_SCORING_CONFIG.weights.substitutionRisk = 1;
+
+    DEFAULT_STORE_SCORING_CONFIG.substitutionRiskBlend.baseRisk = 1;
+    DEFAULT_STORE_SCORING_CONFIG.substitutionRiskBlend.attributeMismatchRisk = 0;
+    const baseRiskWeightedWinner = selectBestStore(matches as any, storeProducts as any);
+
+    DEFAULT_STORE_SCORING_CONFIG.substitutionRiskBlend.baseRisk = 0;
+    DEFAULT_STORE_SCORING_CONFIG.substitutionRiskBlend.attributeMismatchRisk = 1;
+    const attributeMismatchWeightedWinner = selectBestStore(matches as any, storeProducts as any);
+
+    expect(baseRiskWeightedWinner.retailerKey).toBe("attribute-mismatch-cheap-store");
+    expect(attributeMismatchWeightedWinner.retailerKey).toBe("exact-match-expensive-store");
   });
 
   it("does not surface missing ETA as 0", () => {

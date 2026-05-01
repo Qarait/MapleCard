@@ -6,9 +6,15 @@ export type StoreScoringWeights = {
   substitutionRisk: number;
 };
 
+export type SubstitutionRiskBlend = {
+  baseRisk: number;
+  attributeMismatchRisk: number;
+};
+
 export type StoreScoringConfig = {
   version: string;
   weights: StoreScoringWeights;
+  substitutionRiskBlend: SubstitutionRiskBlend;
 };
 
 export const DEFAULT_STORE_SCORING_CONFIG: StoreScoringConfig = {
@@ -19,5 +25,9 @@ export const DEFAULT_STORE_SCORING_CONFIG: StoreScoringConfig = {
     price: 0.2,
     eta: 0.1,
     substitutionRisk: 0.1,
+  },
+  substitutionRiskBlend: {
+    baseRisk: 0.7,
+    attributeMismatchRisk: 0.3,
   },
 };
