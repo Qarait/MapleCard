@@ -120,6 +120,15 @@ Validation expectations:
 - The parser is still rule-based today, but it should eventually read item attributes and quantity policy from the catalog schema instead of hardcoded parser rules.
 - Synthetic canonical items can now be projected into schema records and validated against the new schema expectations.
 
+## Real Catalog Seed
+
+- MapleCard now includes a real code-managed canonical grocery seed in `src/catalog/seedCanonicalCatalog.ts`.
+- The seed is MapleCard-owned and uses generic grocery concepts only; it is not copied from Open Food Facts, USDA, CNF, Instacart, Kroger, or retailer product data.
+- The current seed includes common grocery concepts across dairy, eggs, produce, meat, seafood, pantry, bakery, frozen, beverages, and household basics.
+- The seed is schema-validated through the Sprint 6 catalog schema helpers and is intended to become the stable internal catalog truth before any database is added.
+- Open Food Facts, USDA, and CNF remain possible future enrichment sources only; they are not the current source of truth.
+- Store price, store inventory, and ETA data are still synthetic today and are not yet backed by real retailer integrations.
+
 ## CI
 
 - GitHub Actions CI is configured in `.github/workflows/ci.yml`.
