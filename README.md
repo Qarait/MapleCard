@@ -25,6 +25,23 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 - `npm run build`
 - `npm start`
 
+## Parser Configuration
+
+- `MAPLECARD_PARSER_MODE=deterministic_only | llm_assisted`
+- Default parser mode: `deterministic_only`
+- In `deterministic_only`, MapleCard never calls OpenAI, even if `OPENAI_API_KEY` is present.
+- In `llm_assisted`, MapleCard may call OpenAI only for ambiguous `meal_intent` lines, and only when `OPENAI_API_KEY` is present.
+- If `MAPLECARD_PARSER_MODE=llm_assisted` but `OPENAI_API_KEY` is missing, MapleCard uses the deterministic fallback parser result and emits internal diagnostics/warnings.
+
+## OpenAI Safety Configuration
+
+- `OPENAI_MODEL` defaults to `gpt-4o-mini`
+- `OPENAI_TIMEOUT_MS` defaults to `5000`
+- `OPENAI_MAX_BATCH_ITEMS` defaults to `20`
+- OpenAI requests are timeout-bounded.
+- Ambiguous lines beyond `OPENAI_MAX_BATCH_ITEMS` are not sent to OpenAI and use deterministic fallback behavior instead.
+- Parser diagnostics are kept internal and are not included in the optimize success response.
+
 ## Notes On Current Implementation
 
 - `parseShoppingList` is async.
@@ -39,7 +56,7 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 - Synthetic catalog/store data: optimization currently runs on mock in-memory data from `syntheticCatalogService`.
 - Hardcoded parser schema: known items, attribute schemas, aliases, and category suggestions are embedded in code.
 - Hardcoded scoring weights: store ranking weights are fixed in code and not configurable.
-- Weak input validation: the optimize endpoint only checks that `rawInput` is a string.
+- Input validation is still limited to request-shape and size constraints; it does not validate semantic item quality beyond those bounds.
 - Missing observability: there is no structured logging, metrics, tracing, or OpenAI call instrumentation.
 - Possible attribute schema mismatch: parsed attributes and store product attributes are compared by exact keys/values.
 - Missing ETA fallback behavior: stores with missing ETA values can degrade to `Infinity` during scoring and are later surfaced as `etaMin: 0` in results.

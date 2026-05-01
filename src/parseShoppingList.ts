@@ -426,6 +426,106 @@ function buildParsedLineBase(line: string, partial: Omit<ParsedLine, "rawText">)
   };
 }
 
+export type ParserMode = "deterministic_only" | "llm_assisted";
+
+export type ParserDiagnostics = {
+  parserMode: ParserMode;
+  llmEnabled: boolean;
+  llmAttempted: boolean;
+  llmCalls: number;
+  llmFallbacks: number;
+  llmSkippedReason: string | null;
+  warnings: string[];
+};
+
+const DEFAULT_LLM_FALLBACK_SUGGESTIONS = ["chicken", "rice", "eggs"];
+const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
+const DEFAULT_OPENAI_TIMEOUT_MS = 5000;
+const DEFAULT_OPENAI_MAX_BATCH_ITEMS = 20;
+
+let lastParserDiagnostics: ParserDiagnostics = {
+  parserMode: "deterministic_only",
+  llmEnabled: false,
+  llmAttempted: false,
+  llmCalls: 0,
+  llmFallbacks: 0,
+  llmSkippedReason: "parser_mode_deterministic_only",
+  warnings: [],
+};
+
+function buildFallbackParsedLine(rawText: string): ParsedLine {
+  return buildParsedLineBase(rawText, {
+    lineType: "meal_intent",
+    canonicalQuery: "meal",
+    quantity: undefined,
+    attributes: {},
+    suggestions: DEFAULT_LLM_FALLBACK_SUGGESTIONS,
+    needsUserChoice: true,
+    confidence: 0.6,
+  });
+}
+
+function makeFallbackResults(lines: { index: number; rawText: string }[]): { index: number; parsed: ParsedLine }[] {
+  return lines.map(({ index, rawText }) => ({
+    index,
+    parsed: buildFallbackParsedLine(rawText),
+  }));
+}
+
+function pushParserWarning(diagnostics: ParserDiagnostics, warning: string) {
+  diagnostics.warnings.push(warning);
+  console.warn(`[MapleCard parser] ${warning}`);
+}
+
+function parsePositiveIntegerEnv(rawValue: string | undefined, fallback: number, diagnostics: ParserDiagnostics, envName: string): number {
+  if (rawValue == null || rawValue.trim() === "") return fallback;
+
+  const parsedValue = Number(rawValue);
+  if (!Number.isInteger(parsedValue) || parsedValue <= 0) {
+    pushParserWarning(diagnostics, `${envName} is invalid; using default ${fallback}.`);
+    return fallback;
+  }
+
+  return parsedValue;
+}
+
+function resolveParserMode(diagnostics: ParserDiagnostics): ParserMode {
+  const rawMode = (process.env.MAPLECARD_PARSER_MODE ?? "deterministic_only").trim();
+  if (rawMode === "deterministic_only" || rawMode === "llm_assisted") {
+    return rawMode;
+  }
+
+  pushParserWarning(diagnostics, `MAPLECARD_PARSER_MODE is invalid; using deterministic_only.`);
+  return "deterministic_only";
+}
+
+function getOpenAIConfig(diagnostics: ParserDiagnostics) {
+  return {
+    model: process.env.OPENAI_MODEL ?? DEFAULT_OPENAI_MODEL,
+    timeoutMs: parsePositiveIntegerEnv(process.env.OPENAI_TIMEOUT_MS, DEFAULT_OPENAI_TIMEOUT_MS, diagnostics, "OPENAI_TIMEOUT_MS"),
+    maxBatchItems: parsePositiveIntegerEnv(process.env.OPENAI_MAX_BATCH_ITEMS, DEFAULT_OPENAI_MAX_BATCH_ITEMS, diagnostics, "OPENAI_MAX_BATCH_ITEMS"),
+  };
+}
+
+export function getLastParserDiagnostics(): ParserDiagnostics {
+  return {
+    ...lastParserDiagnostics,
+    warnings: [...lastParserDiagnostics.warnings],
+  };
+}
+
+export function resetLastParserDiagnostics() {
+  lastParserDiagnostics = {
+    parserMode: "deterministic_only",
+    llmEnabled: false,
+    llmAttempted: false,
+    llmCalls: 0,
+    llmFallbacks: 0,
+    llmSkippedReason: "parser_mode_deterministic_only",
+    warnings: [],
+  };
+}
+
 function isAmbiguousForLLM(parsed: ParsedLine): boolean {
   // Only call the LLM for ambiguous meal-intent lines.
   return parsed.lineType === "meal_intent" && parsed.needsUserChoice;
@@ -450,23 +550,13 @@ function validateParsedLineCandidate(x: any): x is ParsedLine {
 
 async function callOpenAIForAmbiguousLines(args: {
   lines: { index: number; rawText: string }[];
+  model: string;
+  timeoutMs: number;
+  diagnostics: ParserDiagnostics;
 }): Promise<{ index: number; parsed: ParsedLine }[]> {
   const apiKey = process.env.OPENAI_API_KEY;
-  const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
   if (!apiKey) {
-    // No API key: do not call OpenAI. Return safe fallbacks.
-    return args.lines.map(({ index, rawText }) => ({
-      index,
-      parsed: buildParsedLineBase(rawText, {
-        lineType: "meal_intent",
-        canonicalQuery: "meal",
-        quantity: undefined,
-        attributes: {},
-        suggestions: ["chicken", "rice", "eggs"],
-        needsUserChoice: true,
-        confidence: 0.6,
-      }),
-    }));
+    return makeFallbackResults(args.lines);
   }
 
   // Use Chat Completions with JSON-only output.
@@ -477,7 +567,7 @@ async function callOpenAIForAmbiguousLines(args: {
   ].join("\n");
 
   const payload = {
-    model,
+    model: args.model,
     temperature: 0.2,
     response_format: { type: "json_object" },
     messages: [
@@ -525,29 +615,38 @@ async function callOpenAIForAmbiguousLines(args: {
     ],
   };
 
-  const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+  const abortController = new AbortController();
+  const timeoutHandle = setTimeout(() => {
+    abortController.abort();
+  }, args.timeoutMs);
+
+  let resp: Response;
+  try {
+    resp = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+      signal: abortController.signal,
+    });
+  } catch (error) {
+    clearTimeout(timeoutHandle);
+    args.diagnostics.llmFallbacks += args.lines.length;
+    if ((error as Error)?.name === "AbortError") {
+      pushParserWarning(args.diagnostics, `OpenAI request timed out after ${args.timeoutMs}ms; using deterministic fallback.`);
+    } else {
+      pushParserWarning(args.diagnostics, "OpenAI request failed; using deterministic fallback.");
+    }
+    return makeFallbackResults(args.lines);
+  }
+  clearTimeout(timeoutHandle);
 
   if (!resp.ok) {
-    // Avoid throwing raw response bodies; just fallback.
-    return args.lines.map(({ index, rawText }) => ({
-      index,
-      parsed: buildParsedLineBase(rawText, {
-        lineType: "meal_intent",
-        canonicalQuery: "meal",
-        quantity: undefined,
-        attributes: {},
-        suggestions: ["chicken", "rice", "eggs"],
-        needsUserChoice: true,
-        confidence: 0.6,
-      }),
-    }));
+    args.diagnostics.llmFallbacks += args.lines.length;
+    pushParserWarning(args.diagnostics, `OpenAI request failed with status ${resp.status}; using deterministic fallback.`);
+    return makeFallbackResults(args.lines);
   }
 
   const data: any = await resp.json();
@@ -561,18 +660,9 @@ async function callOpenAIForAmbiguousLines(args: {
 
   const results: any[] = json?.results ?? json?.lines ?? [];
   if (!Array.isArray(results)) {
-    return args.lines.map(({ index, rawText }) => ({
-      index,
-      parsed: buildParsedLineBase(rawText, {
-        lineType: "meal_intent",
-        canonicalQuery: "meal",
-        quantity: undefined,
-        attributes: {},
-        suggestions: ["chicken", "rice", "eggs"],
-        needsUserChoice: true,
-        confidence: 0.6,
-      }),
-    }));
+    args.diagnostics.llmFallbacks += args.lines.length;
+    pushParserWarning(args.diagnostics, "OpenAI response was not valid JSON for parser results; using deterministic fallback.");
+    return makeFallbackResults(args.lines);
   }
 
   // Expect results aligned to the inputs, but handle if LLM includes wrong ordering.
@@ -590,22 +680,31 @@ async function callOpenAIForAmbiguousLines(args: {
   return args.lines.map(({ index, rawText }) => {
     const fromMap = byIndex.get(index);
     if (fromMap) return { index, parsed: fromMap };
+    args.diagnostics.llmFallbacks += 1;
+    pushParserWarning(args.diagnostics, `OpenAI response omitted parser result for line ${index}; using deterministic fallback.`);
     return {
       index,
-      parsed: buildParsedLineBase(rawText, {
-        lineType: "meal_intent",
-        canonicalQuery: "meal",
-        quantity: undefined,
-        attributes: {},
-        suggestions: ["chicken", "rice", "eggs"],
-        needsUserChoice: true,
-        confidence: 0.6,
-      }),
+      parsed: buildFallbackParsedLine(rawText),
     };
   });
 }
 
 export async function parseShoppingList(rawInput: string): Promise<ParsedLine[]> {
+  const diagnostics: ParserDiagnostics = {
+    parserMode: "deterministic_only",
+    llmEnabled: false,
+    llmAttempted: false,
+    llmCalls: 0,
+    llmFallbacks: 0,
+    llmSkippedReason: null,
+    warnings: [],
+  };
+
+  diagnostics.parserMode = resolveParserMode(diagnostics);
+  const openAIConfig = getOpenAIConfig(diagnostics);
+  const apiKeyPresent = Boolean(process.env.OPENAI_API_KEY);
+  diagnostics.llmEnabled = diagnostics.parserMode === "llm_assisted" && apiKeyPresent;
+
   const lines = rawInput.split(/\r?\n/);
 
   const parsed: ParsedLine[] = new Array(lines.length);
@@ -683,15 +782,59 @@ export async function parseShoppingList(rawInput: string): Promise<ParsedLine[]>
   }
 
   if (ambiguousForLLM.length > 0) {
-    const llmResults = await callOpenAIForAmbiguousLines({ lines: ambiguousForLLM });
-    const byIndex = new Map<number, ParsedLine>();
-    for (const r of llmResults) byIndex.set(r.index, r.parsed);
-    for (let i = 0; i < parsed.length; i++) {
-      if (byIndex.has(i)) parsed[i] = byIndex.get(i)!;
+    if (diagnostics.parserMode === "deterministic_only") {
+      diagnostics.llmSkippedReason = "parser_mode_deterministic_only";
+      diagnostics.llmFallbacks += ambiguousForLLM.length;
+      for (const item of ambiguousForLLM) {
+        parsed[item.index] = buildFallbackParsedLine(item.rawText);
+      }
+    } else if (!apiKeyPresent) {
+      diagnostics.llmSkippedReason = "missing_openai_api_key";
+      diagnostics.llmFallbacks += ambiguousForLLM.length;
+      pushParserWarning(diagnostics, "MAPLECARD_PARSER_MODE=llm_assisted but OPENAI_API_KEY is missing; using deterministic fallback.");
+      for (const item of ambiguousForLLM) {
+        parsed[item.index] = buildFallbackParsedLine(item.rawText);
+      }
+    } else {
+      diagnostics.llmAttempted = true;
+      diagnostics.llmCalls = 1;
+
+      const llmBatch = ambiguousForLLM.slice(0, openAIConfig.maxBatchItems);
+      const overflow = ambiguousForLLM.slice(openAIConfig.maxBatchItems);
+      if (overflow.length > 0) {
+        diagnostics.llmFallbacks += overflow.length;
+        diagnostics.llmSkippedReason = "openai_batch_overflow";
+        pushParserWarning(
+          diagnostics,
+          `OPENAI_MAX_BATCH_ITEMS limit reached; ${overflow.length} ambiguous lines used deterministic fallback.`
+        );
+      }
+
+      const llmResults = await callOpenAIForAmbiguousLines({
+        lines: llmBatch,
+        model: openAIConfig.model,
+        timeoutMs: openAIConfig.timeoutMs,
+        diagnostics,
+      });
+      const byIndex = new Map<number, ParsedLine>();
+      for (const r of llmResults) byIndex.set(r.index, r.parsed);
+      for (let i = 0; i < parsed.length; i++) {
+        if (byIndex.has(i)) parsed[i] = byIndex.get(i)!;
+      }
+
+      for (const item of overflow) {
+        parsed[item.index] = buildFallbackParsedLine(item.rawText);
+      }
     }
+  } else {
+    diagnostics.llmSkippedReason = "no_ambiguous_lines";
   }
 
   // Final safety: ensure return is structured JSON (objects only).
+  lastParserDiagnostics = {
+    ...diagnostics,
+    warnings: [...diagnostics.warnings],
+  };
   return parsed;
 }
 
