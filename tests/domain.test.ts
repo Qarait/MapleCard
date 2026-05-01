@@ -174,4 +174,194 @@ describe("domain behavior", () => {
     expect(result.alternatives[0].retailerKey).toBe("store-missing-eta");
     expect(result.alternatives[0].etaMin).toBeNull();
   });
+
+  it("matches exact attribute keys without normalization side effects", () => {
+    const result = selectBestStore(
+      [
+        {
+          canonicalItemId: "milk",
+          resolvedName: "Milk",
+          matchConfidence: 0.95,
+          usedDefault: false,
+          lowConfidence: false,
+          needsClarification: false,
+          clarificationSuggestions: [],
+          requestedAttributes: { organic: true },
+        },
+      ] as any,
+      [
+        {
+          store_id: "exact-organic",
+          retailerKey: "exact-organic",
+          canonical_item_id: "milk",
+          price_cents: 100,
+          availability_status: "in_stock",
+          in_stock: true,
+          eta_min: 10,
+          attributes_json: { organic: true },
+        },
+        {
+          store_id: "mismatch",
+          retailerKey: "mismatch",
+          canonical_item_id: "milk",
+          price_cents: 100,
+          availability_status: "in_stock",
+          in_stock: true,
+          eta_min: 10,
+          attributes_json: { organic: false },
+        },
+      ] as any
+    );
+
+    expect(result.retailerKey).toBe("exact-organic");
+  });
+
+  it("matches configured alias keys across store attributes", () => {
+    const result = selectBestStore(
+      [
+        {
+          canonicalItemId: "milk",
+          resolvedName: "Milk",
+          matchConfidence: 0.95,
+          usedDefault: false,
+          lowConfidence: false,
+          needsClarification: false,
+          clarificationSuggestions: [],
+          requestedAttributes: { organic: true },
+        },
+      ] as any,
+      [
+        {
+          store_id: "bio-store",
+          retailerKey: "bio-store",
+          canonical_item_id: "milk",
+          price_cents: 100,
+          availability_status: "in_stock",
+          in_stock: true,
+          eta_min: 10,
+          attributes_json: { bio: true },
+        },
+        {
+          store_id: "organic-false-store",
+          retailerKey: "organic-false-store",
+          canonical_item_id: "milk",
+          price_cents: 100,
+          availability_status: "in_stock",
+          in_stock: true,
+          eta_min: 10,
+          attributes_json: { organic: false },
+        },
+      ] as any
+    );
+
+    expect(result.retailerKey).toBe("bio-store");
+  });
+
+  it("does not match unknown aliases", () => {
+    const result = selectBestStore(
+      [
+        {
+          canonicalItemId: "milk",
+          resolvedName: "Milk",
+          matchConfidence: 0.95,
+          usedDefault: false,
+          lowConfidence: false,
+          needsClarification: false,
+          clarificationSuggestions: [],
+          requestedAttributes: { organic: true },
+        },
+      ] as any,
+      [
+        {
+          store_id: "unknown-alias",
+          retailerKey: "unknown-alias",
+          canonical_item_id: "milk",
+          price_cents: 100,
+          availability_status: "in_stock",
+          in_stock: true,
+          eta_min: 10,
+          attributes_json: { organics: true },
+        },
+        {
+          store_id: "known-organic",
+          retailerKey: "known-organic",
+          canonical_item_id: "milk",
+          price_cents: 100,
+          availability_status: "in_stock",
+          in_stock: true,
+          eta_min: 10,
+          attributes_json: { organic: true },
+        },
+      ] as any
+    );
+
+    expect(result.retailerKey).toBe("known-organic");
+  });
+
+  it("does not treat natural as organic", () => {
+    const result = selectBestStore(
+      [
+        {
+          canonicalItemId: "milk",
+          resolvedName: "Milk",
+          matchConfidence: 0.95,
+          usedDefault: false,
+          lowConfidence: false,
+          needsClarification: false,
+          clarificationSuggestions: [],
+          requestedAttributes: { organic: true },
+        },
+      ] as any,
+      [
+        {
+          store_id: "natural-store",
+          retailerKey: "natural-store",
+          canonical_item_id: "milk",
+          price_cents: 100,
+          availability_status: "in_stock",
+          in_stock: true,
+          eta_min: 10,
+          attributes_json: { natural: true },
+        },
+        {
+          store_id: "bio-store",
+          retailerKey: "bio-store",
+          canonical_item_id: "milk",
+          price_cents: 100,
+          availability_status: "in_stock",
+          in_stock: true,
+          eta_min: 10,
+          attributes_json: { bio: true },
+        },
+      ] as any
+    );
+
+    expect(result.retailerKey).toBe("bio-store");
+  });
+
+  it("does not break existing canonical item behavior", () => {
+    const matchParsedLineToCanonical = createCanonicalMatcher(getSyntheticCanonicalItems());
+    const cases = [
+      { rawText: "2% milk", canonicalQuery: "milk", attributes: { fat: "2%", lactoseFree: false, organic: false } },
+      { rawText: "eggs", canonicalQuery: "eggs", attributes: { size: "large", eggCount: 12, organic: false, cageFree: false } },
+      { rawText: "banana", canonicalQuery: "banana", attributes: { ripeness: "yellow", organic: false } },
+      { rawText: "chicken breast", canonicalQuery: "chicken", attributes: { cut: "breast", organic: false, boneless: true, skinless: true } },
+      { rawText: "white rice", canonicalQuery: "rice", attributes: { type: "white", organic: false } },
+    ];
+
+    const results = cases.map((item) =>
+      matchParsedLineToCanonical({
+        rawText: item.rawText,
+        lineType: "exact_item",
+        canonicalQuery: item.canonicalQuery,
+        quantity: undefined,
+        attributes: item.attributes,
+        suggestions: [],
+        needsUserChoice: false,
+        confidence: 0.9,
+      })
+    );
+
+    expect(results.every((result) => result.matchConfidence > 0.6)).toBe(true);
+  });
 });

@@ -68,11 +68,20 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 
 ## Production Risks
 
-- OpenAI dependency: ambiguous meal-intent parsing can call the OpenAI Chat Completions API when `OPENAI_API_KEY` is set.
+- OpenAI dependency: ambiguous meal-intent parsing can call the OpenAI Chat Completions API only when `MAPLECARD_PARSER_MODE=llm_assisted` and `OPENAI_API_KEY` is set.
 - Synthetic catalog/store data: optimization currently runs on mock in-memory data from `syntheticCatalogService`.
 - Hardcoded parser schema: known items, attribute schemas, aliases, and category suggestions are embedded in code.
 - Scoring weights are versioned in code, but they are still code-configured rather than externally managed.
+- Attribute normalization aliases are conservative and code-managed today; a real production schema should eventually be DB-driven.
 - Input validation is still limited to request-shape and size constraints; it does not validate semantic item quality beyond those bounds.
 - Observability is still minimal: warnings now flow through a logger abstraction, but there is still no structured logging backend, metrics, or tracing.
-- Possible attribute schema mismatch: parsed attributes and store product attributes are compared by exact keys/values.
+- Attribute schema drift is reduced by conservative key alias normalization, but value semantics and broader schema evolution still need stronger governance.
 - Missing ETA handling is safer now, but ETA defaulting and penalty metadata remain internal-only and are not yet surfaced for debugging or analytics.
+
+## Attribute Normalization
+
+- MapleCard normalizes a conservative set of attribute keys before canonical matching and store-attribute scoring.
+- Alias coverage is intentionally narrow and only includes explicitly safe key mappings such as `bio -> organic`.
+- Semantically different concepts are not collapsed; for example, `natural` is not treated as `organic`.
+- The current alias configuration is code-managed in `src/config/attributeAliases.ts`.
+- A production-grade attribute schema should eventually be DB-driven rather than maintained only in code.

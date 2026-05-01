@@ -1,5 +1,6 @@
 import { DEFAULT_STORE_SCORING_CONFIG } from "./config/storeScoringConfig";
 import type { CanonicalMatch } from "./matchParsedLineToCanonical";
+import { normalizeAttributeRecord } from "./normalizeAttributes";
 
 export type StoreProduct = {
   store_id?: string;
@@ -124,16 +125,23 @@ function computeSubstitutionRisk(matches: CanonicalMatch[], covered: CanonicalMa
   return clamp01(avg);
 }
 
+function combineSubstitutionRisk(baseRisk: number, avgAttributeCompatibility: number): number {
+  const attributeMismatchRisk = clamp01(1 - avgAttributeCompatibility);
+  return clamp01(baseRisk * 0.7 + attributeMismatchRisk * 0.3);
+}
+
 function computeStoreAttributesCompatibility(requestedAttributes: Record<string, any>, storeAttributes: any): number {
-  const keys = Object.keys(requestedAttributes ?? {});
+  const normalizedRequestedAttributes = normalizeAttributeRecord(requestedAttributes ?? {});
+  const normalizedStoreAttributes = normalizeAttributeRecord(storeAttributes ?? {});
+  const keys = Object.keys(normalizedRequestedAttributes);
   if (keys.length === 0) return 1;
-  if (!storeAttributes || typeof storeAttributes !== "object") return 0;
+  if (Object.keys(normalizedStoreAttributes).length === 0) return 0;
 
   let matched = 0;
   let evaluated = 0;
   for (const k of keys) {
     evaluated++;
-    if (k in storeAttributes && storeAttributes[k] === requestedAttributes[k]) matched++;
+    if (k in normalizedStoreAttributes && normalizedStoreAttributes[k] === normalizedRequestedAttributes[k]) matched++;
   }
   return evaluated === 0 ? 0 : matched / evaluated;
 }
@@ -177,6 +185,7 @@ function buildStoreEvaluations(matches: CanonicalMatch[], storeProducts: StorePr
     const selectedKnownEtaMins: number[] = [];
     let selectedMissingEtaCount = 0;
     const coveredMatches: CanonicalMatch[] = [];
+    const selectedAttributeCompatibilities: number[] = [];
 
     for (const m of required) {
       const canonicalId = m.canonicalItemId;
@@ -206,7 +215,15 @@ function buildStoreEvaluations(matches: CanonicalMatch[], storeProducts: StorePr
       if (etaMin == null) selectedMissingEtaCount += 1;
       else selectedKnownEtaMins.push(etaMin);
       coveredMatches.push(m);
+      selectedAttributeCompatibilities.push(
+        computeStoreAttributesCompatibility(m.requestedAttributes ?? {}, chosen.attributes_json ?? {})
+      );
     }
+
+    const avgAttributeCompatibility =
+      selectedAttributeCompatibilities.length === 0
+        ? 1
+        : selectedAttributeCompatibilities.reduce((sum, value) => sum + value, 0) / selectedAttributeCompatibilities.length;
 
     storeEvaluations.push({
       retailerKey,
@@ -215,7 +232,7 @@ function buildStoreEvaluations(matches: CanonicalMatch[], storeProducts: StorePr
       coverageRatio: required.length === 0 ? 0 : coveredMatches.length / required.length,
       avgMatchConfidence:
         coveredMatches.length === 0 ? 0 : coveredMatches.reduce((a, b) => a + b.matchConfidence, 0) / coveredMatches.length,
-      substitutionRisk: computeSubstitutionRisk(required, coveredMatches),
+      substitutionRisk: combineSubstitutionRisk(computeSubstitutionRisk(required, coveredMatches), avgAttributeCompatibility),
       eta: evaluateStoreEta(selectedKnownEtaMins, selectedMissingEtaCount),
     });
   }

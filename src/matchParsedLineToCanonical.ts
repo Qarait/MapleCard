@@ -1,4 +1,5 @@
 import type { ParsedLine } from "./parseShoppingList";
+import { normalizeAttributeRecord } from "./normalizeAttributes";
 
 export type CanonicalItem = {
   id: string;
@@ -128,8 +129,8 @@ function valuesContainAllowed(allowed: any[], value: any): boolean {
 }
 
 function computeAttributeMatch(parsedLine: ParsedLine, candidate: CanonicalItem): number {
-  const schema = candidate.attribute_schema_json ?? {};
-  const attrs = parsedLine.attributes ?? {};
+  const schema = normalizeAttributeRecord(candidate.attribute_schema_json ?? {});
+  const attrs = normalizeAttributeRecord(parsedLine.attributes ?? {});
   const keys = Object.keys(attrs);
   if (keys.length === 0) return 0.45; // rely more on text/category
 
@@ -177,14 +178,15 @@ function computeSizeCompatibility(parsedLine: ParsedLine, candidate: CanonicalIt
 }
 
 function computeUsedDefault(parsedLine: ParsedLine, candidate: CanonicalItem): boolean {
-  const defaults = candidate.default_attributes_json ?? {};
-  const providedKeys = Object.keys(parsedLine.attributes ?? {});
+  const defaults = normalizeAttributeRecord(candidate.default_attributes_json ?? {});
+  const normalizedAttributes = normalizeAttributeRecord(parsedLine.attributes ?? {});
+  const providedKeys = Object.keys(normalizedAttributes);
   if (providedKeys.length === 0) return true;
 
   // usedDefault if all provided keys match the candidate defaults exactly.
   for (const key of providedKeys) {
     if (!(key in defaults)) return false;
-    if (parsedLine.attributes[key] !== defaults[key]) return false;
+    if (normalizedAttributes[key] !== defaults[key]) return false;
   }
   return true;
 }
@@ -195,8 +197,8 @@ function computeDefaultPreference(usedDefault: boolean): number {
 
 function buildClarificationSuggestions(parsedLine: ParsedLine, candidate: CanonicalItem): string[] {
   const hints: string[] = [];
-  const schema = candidate.attribute_schema_json ?? {};
-  const attrs = parsedLine.attributes ?? {};
+  const schema = normalizeAttributeRecord(candidate.attribute_schema_json ?? {});
+  const attrs = normalizeAttributeRecord(parsedLine.attributes ?? {});
 
   for (const [key, value] of Object.entries(attrs)) {
     if (!(key in schema)) continue;
@@ -283,7 +285,7 @@ export function createCanonicalMatcher(canonicalItems: CanonicalItem[]) {
       lowConfidence,
       needsClarification: lowConfidence,
       clarificationSuggestions: lowConfidence ? buildClarificationSuggestions(parsedLine, bestItem) : [],
-      requestedAttributes: parsedLine.attributes ?? {},
+      requestedAttributes: normalizeAttributeRecord(parsedLine.attributes ?? {}),
       requestedQuantity: parsedLine.quantity,
     };
   }
