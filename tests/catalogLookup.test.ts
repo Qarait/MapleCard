@@ -27,6 +27,12 @@ describe("catalog lookup", () => {
     expect(record?.slug).toBe("greek-yogurt");
   });
 
+  it("keeps generic yogurt lookup generic", () => {
+    const record = lookupSeedCatalogByAlias("yogurt");
+
+    expect(record?.slug).toBe("yogurt");
+  });
+
   it("does not match unknown aliases", () => {
     expect(lookupSeedCatalogByAlias("mystery pantry orb")).toBeNull();
   });

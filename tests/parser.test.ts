@@ -207,11 +207,43 @@ describe("parseShoppingList catalog-aware bridge", () => {
     expect(result.map((item) => ({ lineType: item.lineType, canonicalQuery: item.canonicalQuery }))).toEqual([
       { lineType: "exact_item", canonicalQuery: "bread" },
       { lineType: "exact_item", canonicalQuery: "apples" },
-      { lineType: "exact_item", canonicalQuery: "greek-yogurt" },
+      { lineType: "exact_item", canonicalQuery: "yogurt" },
       { lineType: "exact_item", canonicalQuery: "pasta" },
       { lineType: "exact_item", canonicalQuery: "coffee" },
       { lineType: "exact_item", canonicalQuery: "lettuce" },
     ]);
+  });
+
+  it("maps greek yogurt to the specific greek-yogurt item", async () => {
+    const result = await parseShoppingList("greek yogurt");
+
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        lineType: "exact_item",
+        canonicalQuery: "greek-yogurt",
+        needsUserChoice: false,
+      })
+    );
+  });
+
+  it("keeps generic yogurt clarification-ready instead of mapping it to greek-yogurt", async () => {
+    const result = await parseShoppingList("yogurt");
+
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        lineType: "exact_item",
+        canonicalQuery: "yogurt",
+        needsUserChoice: true,
+        quantity: undefined,
+        attributes: {
+          type: "regular",
+          flavor: "plain",
+          fat: "whole",
+          size: "cup",
+        },
+        suggestions: ["regular", "greek", "drinkable", "plain", "vanilla", "strawberry"],
+      })
+    );
   });
 
   it("keeps bare-number milk ambiguous", async () => {
@@ -254,7 +286,8 @@ describe("parseShoppingList catalog-aware bridge", () => {
     );
     expect(result[1]).toEqual(
       expect.objectContaining({
-        canonicalQuery: "greek-yogurt",
+        canonicalQuery: "yogurt",
+        needsUserChoice: true,
         quantity: undefined,
       })
     );

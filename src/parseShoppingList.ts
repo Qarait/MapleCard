@@ -1,4 +1,4 @@
-import { lookupSeedCatalogByAlias } from "./catalog/catalogLookup";
+import { lookupSeedCatalogByAlias, normalizeCatalogLookupText } from "./catalog/catalogLookup";
 import type { QuantityPolicy } from "./catalog/catalogSchema";
 import { logger } from "./utils/logger";
 
@@ -402,6 +402,16 @@ function resolveCatalogAwareQuantity(line: string, quantityPolicy: QuantityPolic
   return undefined;
 }
 
+function getBridgeClarificationSuggestions(line: string, record: { slug: string; clarificationTemplates: Array<{ options?: string[] }> }) {
+  if (record.slug !== "yogurt") return [];
+
+  const normalizedInput = normalizeCatalogLookupText(stripLeadingQuantityPhrase(line));
+  if (normalizedInput !== "yogurt") return [];
+
+  const firstOptions = record.clarificationTemplates.flatMap((template) => template.options ?? []).slice(0, 6);
+  return firstOptions;
+}
+
 function seedCatalogBridgeRule(line: string) {
   const candidateText = stripLeadingQuantityPhrase(line);
   if (!candidateText) return null;
@@ -409,14 +419,16 @@ function seedCatalogBridgeRule(line: string) {
   const record = lookupSeedCatalogByAlias(candidateText);
   if (!record) return null;
 
+  const suggestions = getBridgeClarificationSuggestions(line, record);
+
   return {
     lineType: "exact_item" as const,
     canonicalQuery: record.slug,
     quantity: resolveCatalogAwareQuantity(line, record.quantityPolicy),
     attributes: { ...(record.default_attributes_json ?? {}) },
-    suggestions: [],
-    needsUserChoice: false,
-    confidence: 0.82,
+    suggestions,
+    needsUserChoice: suggestions.length > 0,
+    confidence: suggestions.length > 0 ? 0.78 : 0.82,
   };
 }
 

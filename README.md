@@ -82,6 +82,7 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 - The parser still has hardcoded rule coverage for the original synthetic item set.
 - The parser now also uses the MapleCard-owned seed catalog as a bridge for simple exact-item lookups.
 - This parser bridge is intentionally limited and is not a full schema-driven parser yet.
+- Generic product terms should not be silently over-mapped to a more specific variant when user intent is broader.
 - The OpenAI branch is only used for ambiguous `meal_intent` lines.
 - Store scoring returns both a `winner` and `alternatives`.
 - Missing store ETA values are returned as `null`, not `0`.
@@ -153,6 +154,7 @@ Validation expectations:
 
 - The current catalog-aware parser support is a bridge only, not a full schema-driven parser rewrite.
 - Existing hardcoded deterministic rules for milk, eggs, banana, chicken, and rice still remain in place.
+- Catalog aliases should preserve user intent and avoid hidden assumptions when a generic term could refer to multiple variants.
 - Future work should move item attributes, aliases, and quantity decisions more fully into the catalog schema over time.
 
 ## CI
