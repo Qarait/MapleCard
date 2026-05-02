@@ -41,6 +41,16 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 - There is still no production deployment, user login, or installable production PWA pipeline yet.
 - There is no real checkout, retailer handoff, or shoppable external integration yet.
 
+## Staging Deployment
+
+- Recommended MVP staging path: Vercel for the frontend from `web/`, Railway for the backend from the repository root.
+- Render remains a fallback option if Railway or Vercel is unavailable, but it is not the primary documented path.
+- Staging deployment guidance lives in [docs/staging-deployment.md](docs/staging-deployment.md).
+- Frontend staging env values are browser-exposed, so they must not contain secrets.
+- `VITE_MAPLECARD_API_BASE_URL` should be the backend origin only, for example `https://your-railway-backend-domain`, with no `/api` suffix.
+- Deployment guidance here is for staging readiness only, not production hardening or production automation.
+- Real inventory, real pricing, and retailer integrations are still not part of MapleCard.
+
 ## Runtime Flow
 
 1. The API accepts raw shopping-list text through `POST /api/optimize`.

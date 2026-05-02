@@ -43,6 +43,10 @@ async function parseApiError(response: Response): Promise<Error> {
   return new Error(safeMessage);
 }
 
+function normalizeApiBaseUrl(apiBaseUrl: string): string {
+  return apiBaseUrl.replace(/\/+$/, "");
+}
+
 export function resolveFrontendConfig(
   env: Record<string, string | undefined> = import.meta.env as Record<string, string | undefined>
 ): FrontendConfig {
@@ -64,9 +68,10 @@ export function createOptimizeShoppingClient(config: FrontendConfig = frontendCo
     }
 
     let response: Response;
+    const apiBaseUrl = normalizeApiBaseUrl(config.apiBaseUrl);
 
     try {
-      response = await fetch(`${config.apiBaseUrl}/api/optimize`, {
+      response = await fetch(`${apiBaseUrl}/api/optimize`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

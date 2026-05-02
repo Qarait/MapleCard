@@ -1,6 +1,27 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createOptimizeShoppingClient } from "./optimizeClient";
 
+function createBackendSuccessResponse() {
+  return {
+    ok: true,
+    json: async () => ({
+      items: [],
+      winner: {
+        provider: "synthetic",
+        retailerKey: "freshmart",
+        subtotal: 12,
+        etaMin: 25,
+        coverageRatio: 1,
+        avgMatchConfidence: 1,
+        score: 0.9,
+        reason: "Best overall score",
+      },
+      alternatives: [],
+      clarifications: [],
+    }),
+  };
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -19,24 +40,7 @@ describe("optimize client", () => {
   });
 
   it("backend mode sends POST /api/optimize", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        items: [],
-        winner: {
-          provider: "synthetic",
-          retailerKey: "freshmart",
-          subtotal: 12,
-          etaMin: 25,
-          coverageRatio: 1,
-          avgMatchConfidence: 1,
-          score: 0.9,
-          reason: "Best overall score",
-        },
-        alternatives: [],
-        clarifications: [],
-      }),
-    });
+    const fetchMock = vi.fn().mockResolvedValue(createBackendSuccessResponse());
 
     vi.stubGlobal("fetch", fetchMock);
 
@@ -54,27 +58,50 @@ describe("optimize client", () => {
         headers: { "Content-Type": "application/json" },
       })
     );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("backend mode keeps a base URL without a trailing slash unchanged", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(createBackendSuccessResponse());
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createOptimizeShoppingClient({
+      apiMode: "backend",
+      apiBaseUrl: "https://backend.example.com",
+    });
+
+    await client({ rawInput: "milk" });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://backend.example.com/api/optimize",
+      expect.objectContaining({ method: "POST" })
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("backend mode trims a trailing slash from the base URL", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(createBackendSuccessResponse());
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createOptimizeShoppingClient({
+      apiMode: "backend",
+      apiBaseUrl: "https://backend.example.com/",
+    });
+
+    await client({ rawInput: "milk" });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://backend.example.com/api/optimize",
+      expect.objectContaining({ method: "POST" })
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("backend mode includes clarificationAnswers in the request payload", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        items: [],
-        winner: {
-          provider: "synthetic",
-          retailerKey: "freshmart",
-          subtotal: 12,
-          etaMin: 25,
-          coverageRatio: 1,
-          avgMatchConfidence: 1,
-          score: 0.9,
-          reason: "Best overall score",
-        },
-        alternatives: [],
-        clarifications: [],
-      }),
-    });
+    const fetchMock = vi.fn().mockResolvedValue(createBackendSuccessResponse());
 
     vi.stubGlobal("fetch", fetchMock);
 
@@ -109,6 +136,35 @@ describe("optimize client", () => {
           value: "greek",
         },
       ],
+    });
+  });
+
+  it("backend mode keeps the optimize response shape unchanged", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(createBackendSuccessResponse());
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createOptimizeShoppingClient({
+      apiMode: "backend",
+      apiBaseUrl: "https://backend.example.com",
+    });
+
+    const response = await client({ rawInput: "milk" });
+
+    expect(response).toEqual({
+      items: [],
+      winner: {
+        provider: "synthetic",
+        retailerKey: "freshmart",
+        subtotal: 12,
+        etaMin: 25,
+        coverageRatio: 1,
+        avgMatchConfidence: 1,
+        score: 0.9,
+        reason: "Best overall score",
+      },
+      alternatives: [],
+      clarifications: [],
     });
   });
 });
