@@ -1,5 +1,10 @@
 import type { CanonicalMatch } from "./matchParsedLineToCanonical";
 import { extractCatalogClarificationQuestionCandidates, lookupSeedCatalogById } from "./catalog/catalogLookup";
+import {
+  buildInternalCatalogClarificationQuestions,
+  buildInternalClarificationQuestion,
+  type InternalClarificationQuestion,
+} from "./clarifications/clarificationContract";
 
 export type ClarificationQuestion = {
   rawText: string;
@@ -125,15 +130,49 @@ function determineOptions(input: ClarificationInput): { options: string[]; key?:
   return { options: cleaned };
 }
 
-function getCatalogClarificationQuestions(input: ClarificationInput): ClarificationQuestion[] {
-  const seedRecord = lookupSeedCatalogById(input.canonicalItemId);
-  if (!seedRecord) return [];
+function toPublicClarificationQuestion(question: InternalClarificationQuestion): ClarificationQuestion {
+  return {
+    rawText: question.rawText,
+    question: question.question,
+    options: question.options,
+  };
+}
 
-  return extractCatalogClarificationQuestionCandidates(seedRecord).map((candidate) => ({
-    rawText: input.rawText,
-    question: candidate.question,
-    options: candidate.options,
-  }));
+export function generateInternalClarificationQuestions(matches: ClarificationInput[]): InternalClarificationQuestion[] {
+  const out: InternalClarificationQuestion[] = [];
+  for (const m of matches) {
+    const needsQuestion = m.needsUserChoice === true || m.matchConfidence < 0.65 || m.lowConfidence === true || m.needsClarification === true;
+    if (!needsQuestion) continue;
+
+    const seedRecord = lookupSeedCatalogById(m.canonicalItemId);
+    if (seedRecord) {
+      const catalogQuestions = buildInternalCatalogClarificationQuestions({
+        rawText: m.rawText,
+        canonicalItemId: m.canonicalItemId,
+        candidates: extractCatalogClarificationQuestionCandidates(seedRecord),
+      });
+      if (catalogQuestions.length > 0) {
+        out.push(...catalogQuestions);
+        continue;
+      }
+    }
+
+    const { options, key } = determineOptions(m);
+    const fallbackOptions = clampNonEmptyStrings(m.clarificationSuggestions ?? []);
+    const finalOptions = options.length > 0 ? options.slice(0, 6) : fallbackOptions.slice(0, 6);
+
+    out.push(
+      buildInternalClarificationQuestion({
+        rawText: m.rawText,
+        canonicalItemId: m.canonicalItemId,
+        question: pickQuestionTemplate(m, key, finalOptions),
+        options: clampNonEmptyStrings(finalOptions),
+        attributeKey: key,
+      })
+    );
+  }
+
+  return out;
 }
 
 /**
@@ -141,28 +180,6 @@ function getCatalogClarificationQuestions(input: ClarificationInput): Clarificat
  * No LLM calls.
  */
 export function generateClarificationQuestions(matches: ClarificationInput[]): ClarificationQuestion[] {
-  const out: ClarificationQuestion[] = [];
-  for (const m of matches) {
-    const needsQuestion = m.needsUserChoice === true || m.matchConfidence < 0.65 || m.lowConfidence === true || m.needsClarification === true;
-    if (!needsQuestion) continue;
-
-    const catalogQuestions = getCatalogClarificationQuestions(m);
-    if (catalogQuestions.length > 0) {
-      out.push(...catalogQuestions);
-      continue;
-    }
-
-    const { options, key } = determineOptions(m);
-    const fallbackOptions = clampNonEmptyStrings(m.clarificationSuggestions ?? []);
-    const finalOptions = options.length > 0 ? options.slice(0, 6) : fallbackOptions.slice(0, 6);
-
-    const question = pickQuestionTemplate(m, key, finalOptions);
-    out.push({
-      rawText: m.rawText,
-      question,
-      options: clampNonEmptyStrings(finalOptions),
-    });
-  }
-  return out;
+  return generateInternalClarificationQuestions(matches).map(toPublicClarificationQuestion);
 }
 

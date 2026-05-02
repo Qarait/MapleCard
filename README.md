@@ -8,6 +8,7 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 - Health check: `GET /healthz`
 - Request body: `{ rawInput: string }`
 - Response body includes `items`, `winner`, `alternatives`, and `clarifications`
+- `clarifications` currently remain public question objects only; internal question ids and answer payload handling are not exposed yet.
 - `winner.etaMin` and alternative `etaMin` values are `number | null`; `null` means ETA is unknown
 
 ## Runtime Flow
@@ -83,6 +84,7 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 - The parser now also uses the MapleCard-owned seed catalog as a bridge for simple exact-item lookups.
 - Seed catalog clarification templates now influence parser-bridge suggestions for bridge-recognized items.
 - Seed catalog clarification templates now also influence user-facing clarification questions.
+- Sprint 14 adds internal clarification question ids and answer-payload readiness for future frontend or PWA answer flows.
 - This parser bridge is intentionally limited and is not a full schema-driven parser yet.
 - Generic product terms should not be silently over-mapped to a more specific variant when user intent is broader.
 - The OpenAI branch is only used for ambiguous `meal_intent` lines.
@@ -160,6 +162,7 @@ Validation expectations:
 - Future work should move all ambiguity handling and question generation more fully into schema-backed catalog logic.
 - This is a step toward schema-driven UX rather than the final parser architecture.
 - Future work should move item attributes, aliases, and quantity decisions more fully into the catalog schema over time.
+- Frontend or PWA answer submission is not yet exposed as an API endpoint; Sprint 14 only adds internal readiness for that flow.
 
 ## CI
 
