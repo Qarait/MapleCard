@@ -38,12 +38,13 @@ export type OptimizeResponse = {
   }>;
   winner: SelectedStoreResult;
   alternatives: SelectedStoreResult[];
-  clarifications: Array<{ id: string; rawText: string; question: string; options: string[]; attributeKey?: string }>;
+  clarifications: Array<{ id: string; lineId: string; rawText: string; question: string; options: string[]; attributeKey?: string }>;
   answerResults?: ClarificationAnswerResult[];
 };
 
 export type OptimizeClarificationAnswer = {
   questionId: string;
+  lineId?: string;
   rawText: string;
   attributeKey?: string;
   value: string;
@@ -81,9 +82,23 @@ function logProviderWarning(message: string, diagnostics: ProviderDiagnostics, d
   });
 }
 
+function normalizeLineIdTextPart(value: string): string {
+  const normalized = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return normalized || "unknown";
+}
+
+function buildLineInstanceId(args: { lineIndex: number; rawText: string; lineType: ParsedLine["lineType"] }): string {
+  return `line_${args.lineIndex}_${normalizeLineIdTextPart(args.rawText)}_${normalizeLineIdTextPart(args.lineType)}`;
+}
+
 function buildClarificationInputs(parsedLines: ParsedLine[], matches: CanonicalMatch[]): ClarificationInput[] {
   return parsedLines.map((pl, idx) => ({
     ...matches[idx],
+    lineId: buildLineInstanceId({ lineIndex: idx, rawText: pl.rawText, lineType: pl.lineType }),
     rawText: pl.rawText,
     needsUserChoice: pl.needsUserChoice,
     resolvedClarificationKeys: [],
@@ -118,6 +133,7 @@ export function applyClarificationAnswersToInputs(
     if (!knownQuestion) {
       answerResults.push({
         questionId: answer.questionId,
+        ...(answer.lineId ? { lineId: answer.lineId } : {}),
         rawText: answer.rawText,
         ...(answer.attributeKey ? { attributeKey: answer.attributeKey } : {}),
         value: answer.value,
@@ -127,9 +143,23 @@ export function applyClarificationAnswersToInputs(
       continue;
     }
 
+    if (answer.lineId && answer.lineId !== knownQuestion.lineId) {
+      answerResults.push({
+        questionId: answer.questionId,
+        lineId: answer.lineId,
+        rawText: answer.rawText,
+        ...(answer.attributeKey ? { attributeKey: answer.attributeKey } : {}),
+        value: answer.value,
+        status: "ignored_line_mismatch",
+        message: "Answer was ignored because it targeted a different shopping-list line.",
+      });
+      continue;
+    }
+
     if (knownQuestion.rawText !== answer.rawText) {
       answerResults.push({
         questionId: answer.questionId,
+        lineId: answer.lineId ?? knownQuestion.lineId,
         rawText: answer.rawText,
         ...(answer.attributeKey ? { attributeKey: answer.attributeKey } : {}),
         value: answer.value,
@@ -142,6 +172,7 @@ export function applyClarificationAnswersToInputs(
     if (!knownQuestion.attributeKey) {
       answerResults.push({
         questionId: answer.questionId,
+        lineId: answer.lineId ?? knownQuestion.lineId,
         rawText: answer.rawText,
         ...(answer.attributeKey ? { attributeKey: answer.attributeKey } : {}),
         value: answer.value,
@@ -154,6 +185,7 @@ export function applyClarificationAnswersToInputs(
     if (answer.attributeKey && answer.attributeKey !== knownQuestion.attributeKey) {
       answerResults.push({
         questionId: answer.questionId,
+        lineId: answer.lineId ?? knownQuestion.lineId,
         rawText: answer.rawText,
         attributeKey: answer.attributeKey,
         value: answer.value,
@@ -163,10 +195,15 @@ export function applyClarificationAnswersToInputs(
       continue;
     }
 
-    const matchingInputIndex = updatedInputs.findIndex((input) => input.rawText === knownQuestion.rawText);
+    const matchingInputIndex = answer.lineId != null
+      ? updatedInputs.findIndex((input) => input.lineId === answer.lineId)
+      : knownQuestion.lineId
+        ? updatedInputs.findIndex((input) => input.lineId === knownQuestion.lineId)
+        : updatedInputs.findIndex((input) => input.rawText === knownQuestion.rawText);
     if (matchingInputIndex === -1) {
       answerResults.push({
         questionId: answer.questionId,
+        lineId: answer.lineId ?? knownQuestion.lineId,
         rawText: answer.rawText,
         attributeKey: knownQuestion.attributeKey,
         value: answer.value,
@@ -182,6 +219,7 @@ export function applyClarificationAnswersToInputs(
       const beforeAttributes = normalizeAttributeRecord(input.requestedAttributes ?? {});
       const outcome = applyClarificationAnswerWithStatus(
         {
+          lineId: input.lineId,
           rawText: input.rawText,
           canonicalItemId: input.canonicalItemId,
           requestedAttributes: beforeAttributes,
@@ -190,6 +228,7 @@ export function applyClarificationAnswersToInputs(
         knownQuestion,
         {
           questionId: answer.questionId,
+          lineId: answer.lineId,
           rawText: answer.rawText,
           attributeKey: answer.attributeKey,
           value: answer.value,
@@ -233,7 +272,7 @@ export function applyClarificationAnswersToInputs(
 }
 
 function toCanonicalMatch(input: ClarificationInput): CanonicalMatch {
-  const { rawText: _rawText, needsUserChoice: _needsUserChoice, resolvedClarificationKeys: _resolvedClarificationKeys, ...match } = input;
+  const { lineId: _lineId, rawText: _rawText, needsUserChoice: _needsUserChoice, resolvedClarificationKeys: _resolvedClarificationKeys, ...match } = input;
   return match;
 }
 

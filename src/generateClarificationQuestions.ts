@@ -8,6 +8,7 @@ import {
 
 export type ClarificationQuestion = {
   id: string;
+  lineId: string;
   rawText: string;
   question: string;
   options: string[];
@@ -15,6 +16,7 @@ export type ClarificationQuestion = {
 };
 
 export type ClarificationInput = CanonicalMatch & {
+  lineId: string;
   rawText: string;
   // Derived from ParsedLine; if present, it takes priority over low confidence.
   needsUserChoice?: boolean;
@@ -141,6 +143,7 @@ function hasResolvedAttribute(input: ClarificationInput, key: string): boolean {
 function toPublicClarificationQuestion(question: InternalClarificationQuestion): ClarificationQuestion {
   return {
     id: question.id,
+    lineId: question.lineId,
     rawText: question.rawText,
     question: question.question,
     options: question.options,
@@ -160,6 +163,7 @@ export function generateInternalClarificationQuestions(matches: ClarificationInp
         (candidate) => !hasResolvedAttribute(m, candidate.attributeKey)
       );
       const catalogQuestions = buildInternalCatalogClarificationQuestions({
+        lineId: m.lineId,
         rawText: m.rawText,
         canonicalItemId: m.canonicalItemId,
         candidates: unresolvedCandidates,
@@ -178,6 +182,7 @@ export function generateInternalClarificationQuestions(matches: ClarificationInp
 
     out.push(
       buildInternalClarificationQuestion({
+        lineId: m.lineId,
         rawText: m.rawText,
         canonicalItemId: m.canonicalItemId,
         question: pickQuestionTemplate(m, key, finalOptions),

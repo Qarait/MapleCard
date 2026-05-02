@@ -4,6 +4,7 @@ export type ClarificationQuestionId = string;
 
 export type InternalClarificationQuestion = {
   id: ClarificationQuestionId;
+  lineId: string;
   rawText: string;
   canonicalItemId?: string;
   slug?: string;
@@ -16,6 +17,7 @@ export type ClarificationAnswerValue = string | number | boolean;
 
 export type ClarificationAnswerPayload = {
   questionId: ClarificationQuestionId;
+  lineId?: string;
   rawText: string;
   canonicalItemId?: string;
   slug?: string;
@@ -26,6 +28,7 @@ export type ClarificationAnswerPayload = {
 export type ClarificationAnswerStatus =
   | "applied"
   | "ignored_unknown_question"
+  | "ignored_line_mismatch"
   | "ignored_raw_text_mismatch"
   | "ignored_attribute_mismatch"
   | "ignored_invalid_option"
@@ -33,6 +36,7 @@ export type ClarificationAnswerStatus =
 
 export type ClarificationAnswerResult = {
   questionId: ClarificationQuestionId;
+  lineId?: string;
   rawText: string;
   attributeKey?: string;
   value: string;
@@ -41,6 +45,7 @@ export type ClarificationAnswerResult = {
 };
 
 export type ClarificationAnswerTarget = {
+  lineId: string;
   rawText: string;
   canonicalItemId?: string;
   slug?: string;
@@ -63,6 +68,7 @@ function normalizeAnswerValue(value: ClarificationAnswerValue): string {
 
 function buildClarificationAnswerResult(args: {
   questionId: ClarificationQuestionId;
+  lineId?: string;
   rawText: string;
   attributeKey?: string;
   value: ClarificationAnswerValue;
@@ -71,6 +77,7 @@ function buildClarificationAnswerResult(args: {
 }): ClarificationAnswerResult {
   return {
     questionId: args.questionId,
+    ...(args.lineId ? { lineId: args.lineId } : {}),
     rawText: args.rawText,
     ...(args.attributeKey ? { attributeKey: args.attributeKey } : {}),
     value: String(args.value),
@@ -80,6 +87,7 @@ function buildClarificationAnswerResult(args: {
 }
 
 export function generateClarificationQuestionId(args: {
+  lineId: string;
   rawText: string;
   canonicalItemId?: string;
   slug?: string;
@@ -87,6 +95,7 @@ export function generateClarificationQuestionId(args: {
   question: string;
 }): ClarificationQuestionId {
   const parts = [
+    normalizeQuestionIdPart(args.lineId),
     normalizeQuestionIdPart(args.rawText),
     normalizeQuestionIdPart(args.canonicalItemId),
     normalizeQuestionIdPart(args.slug),
@@ -98,6 +107,7 @@ export function generateClarificationQuestionId(args: {
 }
 
 export function buildInternalClarificationQuestion(args: {
+  lineId: string;
   rawText: string;
   canonicalItemId?: string;
   slug?: string;
@@ -107,6 +117,7 @@ export function buildInternalClarificationQuestion(args: {
 }): InternalClarificationQuestion {
   return {
     id: generateClarificationQuestionId(args),
+    lineId: args.lineId,
     rawText: args.rawText,
     canonicalItemId: args.canonicalItemId,
     slug: args.slug,
@@ -117,12 +128,14 @@ export function buildInternalClarificationQuestion(args: {
 }
 
 export function buildInternalCatalogClarificationQuestions(args: {
+  lineId: string;
   rawText: string;
   canonicalItemId?: string;
   candidates: CatalogClarificationQuestionCandidate[];
 }): InternalClarificationQuestion[] {
   return args.candidates.map((candidate) =>
     buildInternalClarificationQuestion({
+      lineId: args.lineId,
       rawText: args.rawText,
       canonicalItemId: args.canonicalItemId ?? candidate.canonicalItemId,
       slug: candidate.slug,
@@ -151,6 +164,7 @@ export function applyClarificationAnswerWithStatus(
       target,
       result: buildClarificationAnswerResult({
         questionId: answer.questionId,
+        lineId: answer.lineId,
         rawText: answer.rawText,
         attributeKey: answer.attributeKey,
         value: answer.value,
@@ -164,6 +178,7 @@ export function applyClarificationAnswerWithStatus(
       target,
       result: buildClarificationAnswerResult({
         questionId: answer.questionId,
+        lineId: answer.lineId ?? question.lineId,
         rawText: answer.rawText,
         attributeKey: answer.attributeKey ?? question.attributeKey,
         value: answer.value,
@@ -172,11 +187,26 @@ export function applyClarificationAnswerWithStatus(
       }),
     };
   }
+  if (answer.lineId && answer.lineId !== question.lineId) {
+    return {
+      target,
+      result: buildClarificationAnswerResult({
+        questionId: answer.questionId,
+        lineId: answer.lineId,
+        rawText: answer.rawText,
+        attributeKey: answer.attributeKey ?? question.attributeKey,
+        value: answer.value,
+        status: "ignored_line_mismatch",
+        message: "Answer was ignored because it targeted a different shopping-list line.",
+      }),
+    };
+  }
   if (answer.rawText !== question.rawText || target.rawText !== question.rawText) {
     return {
       target,
       result: buildClarificationAnswerResult({
         questionId: answer.questionId,
+        lineId: answer.lineId ?? question.lineId,
         rawText: answer.rawText,
         attributeKey: answer.attributeKey ?? question.attributeKey,
         value: answer.value,
@@ -191,6 +221,7 @@ export function applyClarificationAnswerWithStatus(
       target,
       result: buildClarificationAnswerResult({
         questionId: answer.questionId,
+        lineId: answer.lineId ?? question.lineId,
         rawText: answer.rawText,
         attributeKey: answer.attributeKey,
         value: answer.value,
@@ -204,6 +235,7 @@ export function applyClarificationAnswerWithStatus(
       target,
       result: buildClarificationAnswerResult({
         questionId: answer.questionId,
+        lineId: answer.lineId ?? question.lineId,
         rawText: answer.rawText,
         attributeKey: answer.attributeKey ?? question.attributeKey,
         value: answer.value,
@@ -217,6 +249,7 @@ export function applyClarificationAnswerWithStatus(
       target,
       result: buildClarificationAnswerResult({
         questionId: answer.questionId,
+        lineId: answer.lineId ?? question.lineId,
         rawText: answer.rawText,
         attributeKey: answer.attributeKey ?? question.attributeKey,
         value: answer.value,
@@ -233,6 +266,7 @@ export function applyClarificationAnswerWithStatus(
       target,
       result: buildClarificationAnswerResult({
         questionId: answer.questionId,
+        lineId: answer.lineId ?? question.lineId,
         rawText: answer.rawText,
         attributeKey: answer.attributeKey ?? question.attributeKey,
         value: answer.value,
@@ -255,6 +289,7 @@ export function applyClarificationAnswerWithStatus(
     },
     result: buildClarificationAnswerResult({
       questionId: answer.questionId,
+      lineId: question.lineId,
       rawText: answer.rawText,
       attributeKey: question.attributeKey,
       value: answer.value,

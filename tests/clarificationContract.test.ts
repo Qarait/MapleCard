@@ -9,6 +9,7 @@ import { generateClarificationQuestions, generateInternalClarificationQuestions 
 describe("clarification contract", () => {
   it("generates deterministic question ids", () => {
     const firstId = generateClarificationQuestionId({
+      lineId: "line_0_yogurt_exact-item",
       rawText: "yogurt",
       canonicalItemId: "seed-dairy-007",
       slug: "yogurt",
@@ -16,6 +17,7 @@ describe("clarification contract", () => {
       question: "Which yogurt type do you want?",
     });
     const secondId = generateClarificationQuestionId({
+      lineId: "line_0_yogurt_exact-item",
       rawText: "yogurt",
       canonicalItemId: "seed-dairy-007",
       slug: "yogurt",
@@ -28,6 +30,7 @@ describe("clarification contract", () => {
 
   it("generates different ids for different attributes or questions", () => {
     const typeId = generateClarificationQuestionId({
+      lineId: "line_0_yogurt_exact-item",
       rawText: "yogurt",
       canonicalItemId: "seed-dairy-007",
       slug: "yogurt",
@@ -35,6 +38,7 @@ describe("clarification contract", () => {
       question: "Which yogurt type do you want?",
     });
     const flavorId = generateClarificationQuestionId({
+      lineId: "line_0_yogurt_exact-item",
       rawText: "yogurt",
       canonicalItemId: "seed-dairy-007",
       slug: "yogurt",
@@ -48,6 +52,7 @@ describe("clarification contract", () => {
   it("builds stable internal ids for catalog-derived yogurt and coffee questions", () => {
     const questions = generateInternalClarificationQuestions([
       {
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         canonicalItemId: "seed-dairy-007",
         resolvedName: "Yogurt",
@@ -60,6 +65,7 @@ describe("clarification contract", () => {
         needsUserChoice: true,
       },
       {
+        lineId: "line_1_coffee_exact-item",
         rawText: "coffee",
         canonicalItemId: "seed-beverages-001",
         resolvedName: "Coffee",
@@ -74,17 +80,18 @@ describe("clarification contract", () => {
     ]);
 
     expect(questions.map((question) => question.id)).toEqual([
-      "cq_yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
-      "cq_yogurt__seed-dairy-007__yogurt__flavor__which-yogurt-flavor-do-you-want",
-      "cq_yogurt__seed-dairy-007__yogurt__fat__which-yogurt-fat-do-you-want",
-      "cq_yogurt__seed-dairy-007__yogurt__size__which-yogurt-size-do-you-want",
-      "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
-      "cq_coffee__seed-beverages-001__coffee__roast__which-coffee-roast-do-you-want",
+      "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+      "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__flavor__which-yogurt-flavor-do-you-want",
+      "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__fat__which-yogurt-fat-do-you-want",
+      "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__size__which-yogurt-size-do-you-want",
+      "cq_line-1-coffee-exact-item__coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+      "cq_line-1-coffee-exact-item__coffee__seed-beverages-001__coffee__roast__which-coffee-roast-do-you-want",
     ]);
   });
 
   it("applies a valid answer safely to requested attributes", () => {
     const question = buildInternalClarificationQuestion({
+      lineId: "line_1_coffee_exact-item",
       rawText: "coffee",
       canonicalItemId: "seed-beverages-001",
       slug: "coffee",
@@ -95,6 +102,7 @@ describe("clarification contract", () => {
 
     const updated = applyClarificationAnswer(
       {
+        lineId: "line_1_coffee_exact-item",
         rawText: "coffee",
         canonicalItemId: "seed-beverages-001",
         slug: "coffee",
@@ -104,6 +112,7 @@ describe("clarification contract", () => {
       question,
       {
         questionId: question.id,
+        lineId: "line_1_coffee_exact-item",
         rawText: "coffee",
         canonicalItemId: "seed-beverages-001",
         slug: "coffee",
@@ -113,6 +122,7 @@ describe("clarification contract", () => {
     );
 
     expect(updated).toEqual({
+      lineId: "line_1_coffee_exact-item",
       rawText: "coffee",
       canonicalItemId: "seed-beverages-001",
       slug: "coffee",
@@ -123,6 +133,7 @@ describe("clarification contract", () => {
 
   it("ignores invalid answers without corrupting requested attributes", () => {
     const question = buildInternalClarificationQuestion({
+      lineId: "line_0_yogurt_exact-item",
       rawText: "yogurt",
       canonicalItemId: "seed-dairy-007",
       slug: "yogurt",
@@ -132,6 +143,7 @@ describe("clarification contract", () => {
     });
 
     const originalTarget = {
+      lineId: "line_0_yogurt_exact-item",
       rawText: "yogurt",
       canonicalItemId: "seed-dairy-007",
       slug: "yogurt",
@@ -141,6 +153,7 @@ describe("clarification contract", () => {
 
     const updated = applyClarificationAnswer(originalTarget, question, {
       questionId: question.id,
+      lineId: "line_0_yogurt_exact-item",
       rawText: "yogurt",
       canonicalItemId: "seed-dairy-007",
       slug: "yogurt",
@@ -154,6 +167,7 @@ describe("clarification contract", () => {
   it("exposes deterministic public clarification ids and stable legacy fields", () => {
     const questions = generateClarificationQuestions([
       {
+        lineId: "line_0_coffee_exact-item",
         rawText: "coffee",
         canonicalItemId: "seed-beverages-001",
         resolvedName: "Coffee",
@@ -169,26 +183,29 @@ describe("clarification contract", () => {
 
     expect(questions).toEqual([
       {
-        id: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        id: "cq_line-0-coffee-exact-item__coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        lineId: "line_0_coffee_exact-item",
         rawText: "coffee",
         question: "Which coffee format do you want?",
         options: ["ground", "whole-bean", "pods"],
         attributeKey: "format",
       },
       {
-        id: "cq_coffee__seed-beverages-001__coffee__roast__which-coffee-roast-do-you-want",
+        id: "cq_line-0-coffee-exact-item__coffee__seed-beverages-001__coffee__roast__which-coffee-roast-do-you-want",
+        lineId: "line_0_coffee_exact-item",
         rawText: "coffee",
         question: "Which coffee roast do you want?",
         options: ["light", "medium", "dark"],
         attributeKey: "roast",
       },
     ]);
-    expect(Object.keys(questions[0])).toEqual(["id", "rawText", "question", "options", "attributeKey"]);
+    expect(Object.keys(questions[0])).toEqual(["id", "lineId", "rawText", "question", "options", "attributeKey"]);
   });
 
   it("builds stable public ids for fallback clarifications", () => {
     const firstQuestions = generateClarificationQuestions([
       {
+        lineId: "line_0_milk_exact-item",
         rawText: "milk",
         canonicalItemId: "item-1",
         resolvedName: "Milk",
@@ -202,6 +219,7 @@ describe("clarification contract", () => {
     ]);
     const secondQuestions = generateClarificationQuestions([
       {
+        lineId: "line_0_milk_exact-item",
         rawText: "milk",
         canonicalItemId: "item-1",
         resolvedName: "Milk",
@@ -217,7 +235,8 @@ describe("clarification contract", () => {
     expect(firstQuestions).toEqual(secondQuestions);
     expect(firstQuestions).toEqual([
       {
-        id: "cq_milk__item-1__na__fat__which-milk-fat-level-do-you-want",
+        id: "cq_line-0-milk-exact-item__milk__item-1__na__fat__which-milk-fat-level-do-you-want",
+        lineId: "line_0_milk_exact-item",
         rawText: "milk",
         question: "Which milk fat level do you want?",
         options: ["skim", "1%", "2%", "whole"],

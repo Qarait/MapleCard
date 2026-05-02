@@ -94,42 +94,48 @@ describe("optimize API validation", () => {
     expect(firstResponse.body.clarifications).toEqual(secondResponse.body.clarifications);
     expect(firstResponse.body.clarifications).toEqual([
       {
-        id: "cq_yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+        id: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         question: "Which yogurt type do you want?",
         options: ["regular", "greek", "drinkable"],
         attributeKey: "type",
       },
       {
-        id: "cq_yogurt__seed-dairy-007__yogurt__flavor__which-yogurt-flavor-do-you-want",
+        id: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__flavor__which-yogurt-flavor-do-you-want",
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         question: "Which yogurt flavor do you want?",
         options: ["plain", "vanilla", "strawberry"],
         attributeKey: "flavor",
       },
       {
-        id: "cq_yogurt__seed-dairy-007__yogurt__fat__which-yogurt-fat-do-you-want",
+        id: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__fat__which-yogurt-fat-do-you-want",
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         question: "Which yogurt fat do you want?",
         options: ["non-fat", "low-fat", "whole"],
         attributeKey: "fat",
       },
       {
-        id: "cq_yogurt__seed-dairy-007__yogurt__size__which-yogurt-size-do-you-want",
+        id: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__size__which-yogurt-size-do-you-want",
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         question: "Which yogurt size do you want?",
         options: ["cup", "tub", "multi-pack"],
         attributeKey: "size",
       },
       {
-        id: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        id: "cq_line-1-coffee-exact-item__coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        lineId: "line_1_coffee_exact-item",
         rawText: "coffee",
         question: "Which coffee format do you want?",
         options: ["ground", "whole-bean", "pods"],
         attributeKey: "format",
       },
       {
-        id: "cq_coffee__seed-beverages-001__coffee__roast__which-coffee-roast-do-you-want",
+        id: "cq_line-1-coffee-exact-item__coffee__seed-beverages-001__coffee__roast__which-coffee-roast-do-you-want",
+        lineId: "line_1_coffee_exact-item",
         rawText: "coffee",
         question: "Which coffee roast do you want?",
         options: ["light", "medium", "dark"],
@@ -149,42 +155,48 @@ describe("optimize API validation", () => {
     expect(response.status).toBe(200);
     expect(response.body.clarifications).toEqual([
       {
-        id: "cq_yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+        id: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         question: "Which yogurt type do you want?",
         options: ["regular", "greek", "drinkable"],
         attributeKey: "type",
       },
       {
-        id: "cq_yogurt__seed-dairy-007__yogurt__flavor__which-yogurt-flavor-do-you-want",
+        id: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__flavor__which-yogurt-flavor-do-you-want",
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         question: "Which yogurt flavor do you want?",
         options: ["plain", "vanilla", "strawberry"],
         attributeKey: "flavor",
       },
       {
-        id: "cq_yogurt__seed-dairy-007__yogurt__fat__which-yogurt-fat-do-you-want",
+        id: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__fat__which-yogurt-fat-do-you-want",
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         question: "Which yogurt fat do you want?",
         options: ["non-fat", "low-fat", "whole"],
         attributeKey: "fat",
       },
       {
-        id: "cq_yogurt__seed-dairy-007__yogurt__size__which-yogurt-size-do-you-want",
+        id: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__size__which-yogurt-size-do-you-want",
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         question: "Which yogurt size do you want?",
         options: ["cup", "tub", "multi-pack"],
         attributeKey: "size",
       },
       {
-        id: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        id: "cq_line-1-coffee-exact-item__coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        lineId: "line_1_coffee_exact-item",
         rawText: "coffee",
         question: "Which coffee format do you want?",
         options: ["ground", "whole-bean", "pods"],
         attributeKey: "format",
       },
       {
-        id: "cq_coffee__seed-beverages-001__coffee__roast__which-coffee-roast-do-you-want",
+        id: "cq_line-1-coffee-exact-item__coffee__seed-beverages-001__coffee__roast__which-coffee-roast-do-you-want",
+        lineId: "line_1_coffee_exact-item",
         rawText: "coffee",
         question: "Which coffee roast do you want?",
         options: ["light", "medium", "dark"],
@@ -203,7 +215,8 @@ describe("optimize API validation", () => {
         rawInput: "yogurt",
         clarificationAnswers: [
           {
-            questionId: "cq_yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+            questionId: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+            lineId: "line_0_yogurt_exact-item",
             rawText: "yogurt",
             attributeKey: "type",
             value: "greek",
@@ -217,7 +230,8 @@ describe("optimize API validation", () => {
     expect(response.body.items[0].match.requestedAttributes.type).toBe("greek");
     expect(response.body.answerResults).toEqual([
       {
-        questionId: "cq_yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+        questionId: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         attributeKey: "type",
         value: "greek",
@@ -227,21 +241,24 @@ describe("optimize API validation", () => {
     ]);
     expect(response.body.clarifications).toEqual([
       {
-        id: "cq_yogurt__seed-dairy-007__yogurt__flavor__which-yogurt-flavor-do-you-want",
+        id: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__flavor__which-yogurt-flavor-do-you-want",
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         question: "Which yogurt flavor do you want?",
         options: ["plain", "vanilla", "strawberry"],
         attributeKey: "flavor",
       },
       {
-        id: "cq_yogurt__seed-dairy-007__yogurt__fat__which-yogurt-fat-do-you-want",
+        id: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__fat__which-yogurt-fat-do-you-want",
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         question: "Which yogurt fat do you want?",
         options: ["non-fat", "low-fat", "whole"],
         attributeKey: "fat",
       },
       {
-        id: "cq_yogurt__seed-dairy-007__yogurt__size__which-yogurt-size-do-you-want",
+        id: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__size__which-yogurt-size-do-you-want",
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         question: "Which yogurt size do you want?",
         options: ["cup", "tub", "multi-pack"],
@@ -260,7 +277,8 @@ describe("optimize API validation", () => {
         rawInput: "coffee",
         clarificationAnswers: [
           {
-            questionId: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+            questionId: "cq_line-0-coffee-exact-item__coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+            lineId: "line_0_coffee_exact-item",
             rawText: "coffee",
             attributeKey: "format",
             value: "pods",
@@ -273,7 +291,8 @@ describe("optimize API validation", () => {
     expect(response.body.items[0].match.requestedAttributes.format).toBe("pods");
     expect(response.body.answerResults).toEqual([
       {
-        questionId: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        questionId: "cq_line-0-coffee-exact-item__coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        lineId: "line_0_coffee_exact-item",
         rawText: "coffee",
         attributeKey: "format",
         value: "pods",
@@ -283,7 +302,8 @@ describe("optimize API validation", () => {
     ]);
     expect(response.body.clarifications).toEqual([
       {
-        id: "cq_coffee__seed-beverages-001__coffee__roast__which-coffee-roast-do-you-want",
+        id: "cq_line-0-coffee-exact-item__coffee__seed-beverages-001__coffee__roast__which-coffee-roast-do-you-want",
+        lineId: "line_0_coffee_exact-item",
         rawText: "coffee",
         question: "Which coffee roast do you want?",
         options: ["light", "medium", "dark"],
@@ -302,7 +322,7 @@ describe("optimize API validation", () => {
         rawInput: "coffee",
         clarificationAnswers: [
           {
-            questionId: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+            questionId: "cq_line-0-coffee-exact-item__coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
             rawText: "coffee",
             attributeKey: "format",
             value: "capsules",
@@ -315,7 +335,8 @@ describe("optimize API validation", () => {
     expect(response.body.items[0].match.requestedAttributes.format).toBe("ground");
     expect(response.body.answerResults).toEqual([
       {
-        questionId: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        questionId: "cq_line-0-coffee-exact-item__coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        lineId: "line_0_coffee_exact-item",
         rawText: "coffee",
         attributeKey: "format",
         value: "capsules",
@@ -325,14 +346,16 @@ describe("optimize API validation", () => {
     ]);
     expect(response.body.clarifications).toEqual([
       {
-        id: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        id: "cq_line-0-coffee-exact-item__coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        lineId: "line_0_coffee_exact-item",
         rawText: "coffee",
         question: "Which coffee format do you want?",
         options: ["ground", "whole-bean", "pods"],
         attributeKey: "format",
       },
       {
-        id: "cq_coffee__seed-beverages-001__coffee__roast__which-coffee-roast-do-you-want",
+        id: "cq_line-0-coffee-exact-item__coffee__seed-beverages-001__coffee__roast__which-coffee-roast-do-you-want",
+        lineId: "line_0_coffee_exact-item",
         rawText: "coffee",
         question: "Which coffee roast do you want?",
         options: ["light", "medium", "dark"],
@@ -374,28 +397,32 @@ describe("optimize API validation", () => {
     ]);
     expect(response.body.clarifications).toEqual([
       {
-        id: "cq_yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+        id: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         question: "Which yogurt type do you want?",
         options: ["regular", "greek", "drinkable"],
         attributeKey: "type",
       },
       {
-        id: "cq_yogurt__seed-dairy-007__yogurt__flavor__which-yogurt-flavor-do-you-want",
+        id: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__flavor__which-yogurt-flavor-do-you-want",
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         question: "Which yogurt flavor do you want?",
         options: ["plain", "vanilla", "strawberry"],
         attributeKey: "flavor",
       },
       {
-        id: "cq_yogurt__seed-dairy-007__yogurt__fat__which-yogurt-fat-do-you-want",
+        id: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__fat__which-yogurt-fat-do-you-want",
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         question: "Which yogurt fat do you want?",
         options: ["non-fat", "low-fat", "whole"],
         attributeKey: "fat",
       },
       {
-        id: "cq_yogurt__seed-dairy-007__yogurt__size__which-yogurt-size-do-you-want",
+        id: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__size__which-yogurt-size-do-you-want",
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         question: "Which yogurt size do you want?",
         options: ["cup", "tub", "multi-pack"],
@@ -414,7 +441,7 @@ describe("optimize API validation", () => {
         rawInput: "coffee",
         clarificationAnswers: [
           {
-            questionId: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+            questionId: "cq_line-0-coffee-exact-item__coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
             rawText: "espresso",
             attributeKey: "format",
             value: "pods",
@@ -425,7 +452,8 @@ describe("optimize API validation", () => {
     expect(response.status).toBe(200);
     expect(response.body.answerResults).toEqual([
       {
-        questionId: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        questionId: "cq_line-0-coffee-exact-item__coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        lineId: "line_0_coffee_exact-item",
         rawText: "espresso",
         attributeKey: "format",
         value: "pods",
@@ -446,7 +474,7 @@ describe("optimize API validation", () => {
         rawInput: "coffee",
         clarificationAnswers: [
           {
-            questionId: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+            questionId: "cq_line-0-coffee-exact-item__coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
             rawText: "coffee",
             attributeKey: "roast",
             value: "pods",
@@ -457,7 +485,8 @@ describe("optimize API validation", () => {
     expect(response.status).toBe(200);
     expect(response.body.answerResults).toEqual([
       {
-        questionId: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        questionId: "cq_line-0-coffee-exact-item__coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        lineId: "line_0_coffee_exact-item",
         rawText: "coffee",
         attributeKey: "roast",
         value: "pods",
@@ -466,6 +495,160 @@ describe("optimize API validation", () => {
       },
     ]);
     expect(response.body.items[0].attributes.format).toBe("ground");
+  });
+
+  it("gives duplicate yogurt lines different lineIds and clarification ids", async () => {
+    process.env.MAPLECARD_PARSER_MODE = "deterministic_only";
+    process.env.MAPLECARD_CATALOG_SOURCE = "seed_bridge";
+
+    const response = await request(app)
+      .post("/api/optimize")
+      .send({ rawInput: "yogurt\nyogurt" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.clarifications).toHaveLength(8);
+    expect(response.body.clarifications[0].lineId).toBe("line_0_yogurt_exact-item");
+    expect(response.body.clarifications[4].lineId).toBe("line_1_yogurt_exact-item");
+    expect(response.body.clarifications[0].id).toBe("cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want");
+    expect(response.body.clarifications[4].id).toBe("cq_line-1-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want");
+    expect(response.body.clarifications[0].id).not.toBe(response.body.clarifications[4].id);
+  });
+
+  it("answering line 0 does not resolve line 1", async () => {
+    process.env.MAPLECARD_PARSER_MODE = "deterministic_only";
+    process.env.MAPLECARD_CATALOG_SOURCE = "seed_bridge";
+
+    const response = await request(app)
+      .post("/api/optimize")
+      .send({
+        rawInput: "yogurt\nyogurt",
+        clarificationAnswers: [
+          {
+            questionId: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+            lineId: "line_0_yogurt_exact-item",
+            rawText: "yogurt",
+            attributeKey: "type",
+            value: "greek",
+          },
+        ],
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.answerResults).toEqual([
+      {
+        questionId: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+        lineId: "line_0_yogurt_exact-item",
+        rawText: "yogurt",
+        attributeKey: "type",
+        value: "greek",
+        status: "applied",
+        message: "Answer was applied to the optimization request.",
+      },
+    ]);
+    expect(response.body.clarifications.some((question: any) => question.id === "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want")).toBe(false);
+    expect(response.body.clarifications.some((question: any) => question.id === "cq_line-1-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want")).toBe(true);
+  });
+
+  it("answering line 1 does not resolve line 0", async () => {
+    process.env.MAPLECARD_PARSER_MODE = "deterministic_only";
+    process.env.MAPLECARD_CATALOG_SOURCE = "seed_bridge";
+
+    const response = await request(app)
+      .post("/api/optimize")
+      .send({
+        rawInput: "yogurt\nyogurt",
+        clarificationAnswers: [
+          {
+            questionId: "cq_line-1-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+            lineId: "line_1_yogurt_exact-item",
+            rawText: "yogurt",
+            attributeKey: "type",
+            value: "drinkable",
+          },
+        ],
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.answerResults).toEqual([
+      {
+        questionId: "cq_line-1-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+        lineId: "line_1_yogurt_exact-item",
+        rawText: "yogurt",
+        attributeKey: "type",
+        value: "drinkable",
+        status: "applied",
+        message: "Answer was applied to the optimization request.",
+      },
+    ]);
+    expect(response.body.clarifications.some((question: any) => question.id === "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want")).toBe(true);
+    expect(response.body.clarifications.some((question: any) => question.id === "cq_line-1-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want")).toBe(false);
+  });
+
+  it("returns ignored_line_mismatch when lineId points at a different duplicate line", async () => {
+    process.env.MAPLECARD_PARSER_MODE = "deterministic_only";
+    process.env.MAPLECARD_CATALOG_SOURCE = "seed_bridge";
+
+    const response = await request(app)
+      .post("/api/optimize")
+      .send({
+        rawInput: "yogurt\nyogurt",
+        clarificationAnswers: [
+          {
+            questionId: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+            lineId: "line_1_yogurt_exact-item",
+            rawText: "yogurt",
+            attributeKey: "type",
+            value: "greek",
+          },
+        ],
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.answerResults).toEqual([
+      {
+        questionId: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+        lineId: "line_1_yogurt_exact-item",
+        rawText: "yogurt",
+        attributeKey: "type",
+        value: "greek",
+        status: "ignored_line_mismatch",
+        message: "Answer was ignored because it targeted a different shopping-list line.",
+      },
+    ]);
+  });
+
+  it("old answers without lineId still work for duplicate lines via questionId", async () => {
+    process.env.MAPLECARD_PARSER_MODE = "deterministic_only";
+    process.env.MAPLECARD_CATALOG_SOURCE = "seed_bridge";
+
+    const response = await request(app)
+      .post("/api/optimize")
+      .send({
+        rawInput: "yogurt\nyogurt",
+        clarificationAnswers: [
+          {
+            questionId: "cq_line-1-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+            rawText: "yogurt",
+            attributeKey: "type",
+            value: "greek",
+          },
+        ],
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.answerResults).toEqual([
+      {
+        questionId: "cq_line-1-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+        lineId: "line_1_yogurt_exact-item",
+        rawText: "yogurt",
+        attributeKey: "type",
+        value: "greek",
+        status: "applied",
+        message: "Answer was applied to the optimization request.",
+      },
+    ]);
+    expect(response.body.clarifications.some((question: any) => question.id === "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want")).toBe(true);
+    expect(response.body.clarifications.some((question: any) => question.id === "cq_line-1-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want")).toBe(false);
   });
 
   it("rejects a missing rawInput", async () => {

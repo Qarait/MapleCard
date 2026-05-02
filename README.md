@@ -6,12 +6,13 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 
 - Main endpoint: `POST /api/optimize`
 - Health check: `GET /healthz`
-- Request body: `{ rawInput: string, clarificationAnswers?: Array<{ questionId: string; rawText: string; attributeKey?: string; value: string }> }`
+- Request body: `{ rawInput: string, clarificationAnswers?: Array<{ questionId: string; lineId?: string; rawText: string; attributeKey?: string; value: string }> }`
 - Response body includes `items`, `winner`, `alternatives`, and `clarifications`
 - When clarification answers are submitted, the response may also include `answerResults` describing whether each answer was applied or ignored.
-- `clarifications` now include a stable `id` for each question while preserving `rawText`, `question`, and `options`.
+- `clarifications` now include a stable `id` and `lineId` for each question while preserving `rawText`, `question`, and `options`.
 - Frontend or PWA clients should treat clarification `id` as the primary key for future answer submission flows.
 - Frontend or PWA clients should submit clarification answers using the question `id` plus the selected answer `value`; `attributeKey` is optional metadata.
+- `lineId` is optional in clarification answers for backward compatibility, but it is the recommended way to target the correct duplicate shopping-list line.
 - Clarification answer submission is currently stateless; MapleCard does not persist user sessions or clarification history yet.
 - `answerResults` is intended for frontend or PWA feedback so the UI can explain whether each submitted answer was applied or ignored.
 - `winner.etaMin` and alternative `etaMin` values are `number | null`; `null` means ETA is unknown
@@ -93,6 +94,7 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 - Sprint 15 exposes stable clarification ids publicly so frontend clients can safely persist and submit user choices later.
 - Sprint 16 allows `POST /api/optimize` to accept optional clarification answers and rerun optimization without adding a separate answer endpoint.
 - Sprint 17 adds public answer-application statuses so clients can tell whether submitted clarification answers were applied or ignored.
+- Sprint 18 adds stable per-line `lineId` values so duplicate shopping-list lines can be targeted independently.
 - This parser bridge is intentionally limited and is not a full schema-driven parser yet.
 - Generic product terms should not be silently over-mapped to a more specific variant when user intent is broader.
 - The OpenAI branch is only used for ambiguous `meal_intent` lines.
@@ -172,6 +174,7 @@ Validation expectations:
 - Future work should move item attributes, aliases, and quantity decisions more fully into the catalog schema over time.
 - Frontend or PWA answer submission is still stateless and uses the existing optimize endpoint; there is no user session or database persistence yet.
 - Public clarification objects still retain `rawText`, `question`, and `options` for backward compatibility even though `id` should now be treated as the primary answer key.
+- Public clarification `lineId` values let frontend or PWA clients distinguish duplicate raw-text lines and should be sent back when answering those clarifications.
 - Malformed clarification answer payloads are rejected with `400` errors, while structurally valid but inapplicable answers are ignored safely.
 - Inapplicable clarification answers do not crash optimization or corrupt requested attributes; they are reported through `answerResults` with safe status messages.
 

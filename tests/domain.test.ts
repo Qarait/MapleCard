@@ -36,6 +36,7 @@ describe("domain behavior", () => {
   it("generates a basic clarification question", () => {
     const questions = generateClarificationQuestions([
       {
+        lineId: "line_0_milk_exact-item",
         rawText: "milk",
         canonicalItemId: "item-1",
         resolvedName: "Milk",
@@ -49,7 +50,8 @@ describe("domain behavior", () => {
     ]);
 
     expect(questions).toHaveLength(1);
-    expect(questions[0].id).toBe("cq_milk__item-1__na__fat__which-milk-fat-level-do-you-want");
+  expect(questions[0].id).toBe("cq_line-0-milk-exact-item__milk__item-1__na__fat__which-milk-fat-level-do-you-want");
+  expect(questions[0].lineId).toBe("line_0_milk_exact-item");
     expect(questions[0].attributeKey).toBe("fat");
     expect(questions[0].question).toBe("Which milk fat level do you want?");
     expect(questions[0].options).toEqual(["skim", "1%", "2%", "whole"]);
@@ -58,6 +60,7 @@ describe("domain behavior", () => {
   it("generates structured clarification questions for generic yogurt", () => {
     const questions = generateClarificationQuestions([
       {
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         canonicalItemId: "seed-dairy-007",
         resolvedName: "Yogurt",
@@ -73,28 +76,32 @@ describe("domain behavior", () => {
 
     expect(questions).toEqual([
       {
-        id: "cq_yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+        id: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         question: "Which yogurt type do you want?",
         options: ["regular", "greek", "drinkable"],
         attributeKey: "type",
       },
       {
-        id: "cq_yogurt__seed-dairy-007__yogurt__flavor__which-yogurt-flavor-do-you-want",
+        id: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__flavor__which-yogurt-flavor-do-you-want",
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         question: "Which yogurt flavor do you want?",
         options: ["plain", "vanilla", "strawberry"],
         attributeKey: "flavor",
       },
       {
-        id: "cq_yogurt__seed-dairy-007__yogurt__fat__which-yogurt-fat-do-you-want",
+        id: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__fat__which-yogurt-fat-do-you-want",
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         question: "Which yogurt fat do you want?",
         options: ["non-fat", "low-fat", "whole"],
         attributeKey: "fat",
       },
       {
-        id: "cq_yogurt__seed-dairy-007__yogurt__size__which-yogurt-size-do-you-want",
+        id: "cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__size__which-yogurt-size-do-you-want",
+        lineId: "line_0_yogurt_exact-item",
         rawText: "yogurt",
         question: "Which yogurt size do you want?",
         options: ["cup", "tub", "multi-pack"],
@@ -106,6 +113,7 @@ describe("domain behavior", () => {
   it("generates structured clarification questions for greek yogurt and coffee", () => {
     const questions = generateClarificationQuestions([
       {
+        lineId: "line_0_greek-yogurt_exact-item",
         rawText: "greek yogurt",
         canonicalItemId: "seed-dairy-003",
         resolvedName: "Greek Yogurt",
@@ -118,6 +126,7 @@ describe("domain behavior", () => {
         needsUserChoice: true,
       },
       {
+        lineId: "line_1_coffee_exact-item",
         rawText: "coffee",
         canonicalItemId: "seed-beverages-001",
         resolvedName: "Coffee",
@@ -133,21 +142,24 @@ describe("domain behavior", () => {
 
     expect(questions).toEqual([
       {
-        id: "cq_greek-yogurt__seed-dairy-003__greek-yogurt__flavor__which-greek-yogurt-flavor-do-you-want",
+        id: "cq_line-0-greek-yogurt-exact-item__greek-yogurt__seed-dairy-003__greek-yogurt__flavor__which-greek-yogurt-flavor-do-you-want",
+        lineId: "line_0_greek-yogurt_exact-item",
         rawText: "greek yogurt",
         question: "Which greek yogurt flavor do you want?",
         options: ["plain", "vanilla", "strawberry"],
         attributeKey: "flavor",
       },
       {
-        id: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        id: "cq_line-1-coffee-exact-item__coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        lineId: "line_1_coffee_exact-item",
         rawText: "coffee",
         question: "Which coffee format do you want?",
         options: ["ground", "whole-bean", "pods"],
         attributeKey: "format",
       },
       {
-        id: "cq_coffee__seed-beverages-001__coffee__roast__which-coffee-roast-do-you-want",
+        id: "cq_line-1-coffee-exact-item__coffee__seed-beverages-001__coffee__roast__which-coffee-roast-do-you-want",
+        lineId: "line_1_coffee_exact-item",
         rawText: "coffee",
         question: "Which coffee roast do you want?",
         options: ["light", "medium", "dark"],
@@ -192,6 +204,7 @@ describe("domain behavior", () => {
     const { updatedInputs, answerResults } = applyClarificationAnswersToInputs(
       [
         {
+          lineId: "line_0_milk_exact-item",
           rawText: "milk",
           canonicalItemId: "item-1",
           resolvedName: "Milk",
@@ -208,7 +221,8 @@ describe("domain behavior", () => {
       parsedLines,
       [
         {
-          questionId: "cq_milk__item-1__na__fat__which-milk-fat-level-do-you-want",
+          questionId: "cq_line-0-milk-exact-item__milk__item-1__na__fat__which-milk-fat-level-do-you-want",
+          lineId: "line_0_milk_exact-item",
           rawText: "milk",
           attributeKey: "fat",
           value: "whole",
@@ -218,7 +232,8 @@ describe("domain behavior", () => {
 
     expect(answerResults).toEqual([
       {
-        questionId: "cq_milk__item-1__na__fat__which-milk-fat-level-do-you-want",
+        questionId: "cq_line-0-milk-exact-item__milk__item-1__na__fat__which-milk-fat-level-do-you-want",
+        lineId: "line_0_milk_exact-item",
         rawText: "milk",
         attributeKey: "fat",
         value: "whole",

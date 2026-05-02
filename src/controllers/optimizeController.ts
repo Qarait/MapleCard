@@ -136,6 +136,14 @@ function validateClarificationAnswers(body: any): ValidationError | null {
         details: { index, field: "attributeKey" },
       };
     }
+
+    if (answer.lineId != null && typeof answer.lineId !== "string") {
+      return {
+        code: "invalid_clarification_answer",
+        message: "`lineId` must be a string when provided.",
+        details: { index, field: "lineId" },
+      };
+    }
   }
 
   return null;
@@ -152,6 +160,7 @@ function validateOptimizeRequest(body: any): { error: ValidationError | null; va
     ? body.clarificationAnswers.map((answer: any) => ({
         questionId: answer.questionId.trim(),
         rawText: answer.rawText.trim(),
+        ...(answer.lineId != null ? { lineId: answer.lineId.trim() } : {}),
         ...(answer.attributeKey != null ? { attributeKey: answer.attributeKey.trim() } : {}),
         value: answer.value.trim(),
       }))
