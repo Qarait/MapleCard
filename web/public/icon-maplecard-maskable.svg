@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">MapleCard placeholder maskable icon</title>
+  <desc id="desc">Maskable MapleCard placeholder icon with a full-bleed gradient field and centered maple basket mark.</desc>
+  <defs>
+    <radialGradient id="maskBg" cx="50%" cy="32%" r="74%">
+      <stop offset="0" stop-color="#34d399" />
+      <stop offset="1" stop-color="#0f766e" />
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="144" fill="url(#maskBg)" />
+  <circle cx="256" cy="256" r="160" fill="#fffaf2" opacity="0.14" />
+  <path d="M172 198h168l-20 116H192l-20-116Z" fill="#fffaf2" />
+  <path d="M210 198c0-35 20-56 46-56 28 0 46 21 46 56" fill="none" stroke="#fffaf2" stroke-linecap="round" stroke-width="18" />
+  <path d="M256 210 276 170l16 26 30 9-21 22 6 34-31-16-20 24-20-24-31 16 6-34-21-22 30-9 16-26 20 40Z" fill="#dc2626" />
+</svg>

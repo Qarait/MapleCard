@@ -30,12 +30,15 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 ## Frontend / PWA
 
 - MapleCard now includes a scaffolded mobile-first web client under `web/`.
-- The frontend defaults to fixture mode so UI development and tests do not require the backend to be running.
-- A real backend integration mode is scaffolded through frontend config, but it is not the default yet.
+- Sprint 22 adds a cleaner mobile-first layout, larger clarification touch targets, clearer answer feedback, and duplicate-line UI that reads well before you need the raw `lineId` details.
+- The frontend still defaults to fixture mode so UI development and tests do not require the backend to be running.
+- A real backend integration mode still exists through frontend config, but it is not the default.
 - Example frontend env file: [web/.env.example](web/.env.example)
 - Local full-stack smoke path: [docs/local-fullstack-smoke-test.md](docs/local-fullstack-smoke-test.md)
 - Root developer scripts now include `npm run dev:backend`, `npm run dev:web`, and `npm run dev:fullstack`.
-- There is no production deployment, user login, or installable production PWA pipeline yet.
+- The PWA scaffold now includes a manifest, theme-color metadata, and placeholder install icons for local installability groundwork.
+- There is still no service worker or offline strategy yet.
+- There is still no production deployment, user login, or installable production PWA pipeline yet.
 - There is no real checkout, retailer handoff, or shoppable external integration yet.
 
 ## Runtime Flow

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">MapleCard placeholder app icon</title>
+  <desc id="desc">Rounded square icon with a maple-colored gradient and a simplified shopping basket mark.</desc>
+  <defs>
+    <linearGradient id="bg" x1="64" x2="448" y1="64" y2="448" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0f766e" />
+      <stop offset="1" stop-color="#d97706" />
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="112" fill="url(#bg)" />
+  <path d="M174 184h164l-18 126H192l-18-126Z" fill="#fffaf2" opacity="0.96" />
+  <path d="M208 184c0-37 21-58 48-58 30 0 48 22 48 58" fill="none" stroke="#fffaf2" stroke-linecap="round" stroke-width="18" />
+  <path d="M256 192 278 150l17 28 33 10-23 23 6 36-33-17-22 26-22-26-33 17 6-36-23-23 33-10 17-28 21 42Z" fill="#dc2626" />
+</svg>

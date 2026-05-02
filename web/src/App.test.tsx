@@ -19,6 +19,43 @@ describe("MapleCard mobile web scaffold", () => {
     expect(screen.getByRole("button", { name: /optimize shopping list/i })).toBeInTheDocument();
   });
 
+  it("renders an empty input helper state and disables submit", async () => {
+    const user = userEvent.setup();
+
+    render(<App optimizeClient={vi.fn()} />);
+
+    const input = screen.getByLabelText(/raw shopping list/i);
+    await user.clear(input);
+
+    expect(screen.getByRole("status")).toHaveTextContent(/start with at least one grocery line/i);
+    expect(screen.getByRole("button", { name: /optimize shopping list/i })).toBeDisabled();
+  });
+
+  it("renders a loading state while optimizeShopping is running", async () => {
+    const user = userEvent.setup();
+
+    let resolveRequest: ((response: OptimizeResponse) => void) | undefined;
+    const client = vi.fn(
+      () =>
+        new Promise<OptimizeResponse>((resolve) => {
+          resolveRequest = resolve;
+        })
+    );
+
+    render(<App optimizeClient={client} />);
+
+    const input = screen.getByLabelText(/raw shopping list/i);
+    await user.clear(input);
+    await user.type(input, "yogurt");
+    await user.click(screen.getByRole("button", { name: /optimize shopping list/i }));
+
+    expect(screen.getByRole("status")).toHaveTextContent(/building your shopping plan/i);
+
+    resolveRequest?.(getFixtureOptimizeResponse({ rawInput: "yogurt" }));
+
+    expect(await screen.findByRole("heading", { name: /optimized result summary/i })).toBeInTheDocument();
+  });
+
   it("renders a fixture optimize result", async () => {
     const user = userEvent.setup();
     const client = vi.fn(async (request: OptimizeRequest) => getFixtureOptimizeResponse(request));
@@ -36,7 +73,7 @@ describe("MapleCard mobile web scaffold", () => {
     expect(screen.getByText(/parsed items/i)).toBeInTheDocument();
   });
 
-  it("renders clarification questions with id and lineId", async () => {
+  it("renders clarification questions with user-friendly duplicate-line labels", async () => {
     const user = userEvent.setup();
     const client = vi.fn(async (request: OptimizeRequest) => getFixtureOptimizeResponse(request));
 
@@ -48,8 +85,8 @@ describe("MapleCard mobile web scaffold", () => {
     await user.click(screen.getByRole("button", { name: /optimize shopping list/i }));
 
     expect(await screen.findByText(/which yogurt type do you want/i)).toBeInTheDocument();
-    expect(screen.getByText(/lineId: line_0_yogurt_exact-item/i)).toBeInTheDocument();
-    expect(screen.getByText(/id: cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want/i)).toBeInTheDocument();
+    expect(screen.getByText(/list line 1 still needs a couple of quick choices/i)).toBeInTheDocument();
+    expect(screen.getByText(/target key: line_0_yogurt_exact-item/i)).toBeInTheDocument();
   });
 
   it("selecting an answer builds the correct clarificationAnswers payload", async () => {
@@ -81,7 +118,7 @@ describe("MapleCard mobile web scaffold", () => {
     });
   });
 
-  it("renders answerResults feedback", async () => {
+  it("renders selected answers and answerResults in a user-friendly form", async () => {
     const user = userEvent.setup();
     const client = vi.fn(async (request: OptimizeRequest) => getFixtureOptimizeResponse(request));
 
@@ -94,8 +131,10 @@ describe("MapleCard mobile web scaffold", () => {
     await screen.findByText(/which yogurt type do you want/i);
     await user.click(screen.getByRole("button", { name: /^greek$/i }));
 
-    expect(await screen.findByText(/answer was applied to the optimization request/i)).toBeInTheDocument();
-    expect(screen.getByText(/^applied$/i)).toBeInTheDocument();
+    expect((await screen.findAllByText(/saved answer/i)).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/type: greek/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/answer was applied to the optimization request/i)).toBeInTheDocument();
+    expect(screen.getByText(/which yogurt flavor do you want/i)).toBeInTheDocument();
   });
 
   it("keeps duplicate yogurt line questions distinguishable by lineId", async () => {
@@ -109,10 +148,24 @@ describe("MapleCard mobile web scaffold", () => {
     await user.type(input, "yogurt{enter}yogurt");
     await user.click(screen.getByRole("button", { name: /optimize shopping list/i }));
 
-    expect(await screen.findByText(/lineId: line_0_yogurt_exact-item/i)).toBeInTheDocument();
-    expect(screen.getByText(/lineId: line_1_yogurt_exact-item/i)).toBeInTheDocument();
-    expect(screen.getByText(/id: cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want/i)).toBeInTheDocument();
-    expect(screen.getByText(/id: cq_line-1-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want/i)).toBeInTheDocument();
+    expect(await screen.findByText(/yogurt request 1 of 2/i)).toBeInTheDocument();
+    expect(screen.getByText(/yogurt request 2 of 2/i)).toBeInTheDocument();
+    expect(screen.getByText(/target key: line_0_yogurt_exact-item/i)).toBeInTheDocument();
+    expect(screen.getByText(/target key: line_1_yogurt_exact-item/i)).toBeInTheDocument();
+  });
+
+  it("renders a no-clarifications state for specific lists", async () => {
+    const user = userEvent.setup();
+    const client = vi.fn(async (request: OptimizeRequest) => getFixtureOptimizeResponse(request));
+
+    render(<App optimizeClient={client} />);
+
+    const input = screen.getByLabelText(/raw shopping list/i);
+    await user.clear(input);
+    await user.type(input, "2% milk{enter}eggs{enter}banana{enter}rice");
+    await user.click(screen.getByRole("button", { name: /optimize shopping list/i }));
+
+    expect(await screen.findByText(/no remaining clarification questions/i)).toBeInTheDocument();
   });
 
   it("renders a safe validation error message from backend mode", async () => {
