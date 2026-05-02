@@ -66,7 +66,7 @@ export default function App({ optimizeClient = optimizeShopping }: AppProps) {
       setResponse(nextResponse);
       setSubmittedRawInput(nextSubmittedInput);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Optimization failed.";
+      const message = error instanceof Error ? error.message : "MapleCard could not complete this request right now. Please try again in a moment.";
       setErrorMessage(message);
     } finally {
       setIsLoading(false);
@@ -107,7 +107,7 @@ export default function App({ optimizeClient = optimizeShopping }: AppProps) {
         <p className="eyebrow">MapleCard mobile-first web scaffold</p>
         <h1>Plan a grocery run before the backend is live.</h1>
         <p className="hero-copy">
-          Fixture mode is the default, so this client can exercise the public API contract and duplicate-line clarification flow without requiring a running backend.
+          Fixture mode is the default, so this client can exercise the public API contract and duplicate-line clarification flow without requiring a running backend. Backend mode is available for local smoke testing against MapleCard on port 3000.
         </p>
         <div className="mode-pill-row">
           <span className="mode-pill">Mode: {frontendConfig.apiMode}</span>
@@ -132,7 +132,7 @@ export default function App({ optimizeClient = optimizeShopping }: AppProps) {
         <button className="primary-button" onClick={handleSubmit} disabled={isLoading || rawInput.trim().length === 0}>
           {isLoading ? "Optimizing..." : "Optimize shopping list"}
         </button>
-        {errorMessage ? <p className="error-banner">{errorMessage}</p> : null}
+        {errorMessage ? <p className="error-banner" role="alert">{errorMessage}</p> : null}
       </section>
 
       {response ? (

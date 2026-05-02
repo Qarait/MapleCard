@@ -32,6 +32,9 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 - MapleCard now includes a scaffolded mobile-first web client under `web/`.
 - The frontend defaults to fixture mode so UI development and tests do not require the backend to be running.
 - A real backend integration mode is scaffolded through frontend config, but it is not the default yet.
+- Example frontend env file: [web/.env.example](web/.env.example)
+- Local full-stack smoke path: [docs/local-fullstack-smoke-test.md](docs/local-fullstack-smoke-test.md)
+- Root developer scripts now include `npm run dev:backend`, `npm run dev:web`, and `npm run dev:fullstack`.
 - There is no production deployment, user login, or installable production PWA pipeline yet.
 - There is no real checkout, retailer handoff, or shoppable external integration yet.
 

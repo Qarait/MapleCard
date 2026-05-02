@@ -1,9 +1,14 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
+import { createOptimizeShoppingClient } from "./api/optimizeClient";
 import { getFixtureOptimizeResponse } from "./fixtures/optimizeFixtures";
 import type { OptimizeRequest, OptimizeResponse } from "./types/api";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("MapleCard mobile web scaffold", () => {
   it("renders the raw input screen", () => {
@@ -108,5 +113,57 @@ describe("MapleCard mobile web scaffold", () => {
     expect(screen.getByText(/lineId: line_1_yogurt_exact-item/i)).toBeInTheDocument();
     expect(screen.getByText(/id: cq_line-0-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want/i)).toBeInTheDocument();
     expect(screen.getByText(/id: cq_line-1-yogurt-exact-item__yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want/i)).toBeInTheDocument();
+  });
+
+  it("renders a safe validation error message from backend mode", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({
+        error: {
+          code: "invalid_clarification_answer",
+          message: "Each clarification answer must include a non-empty `questionId`.",
+        },
+      }),
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <App
+        optimizeClient={createOptimizeShoppingClient({
+          apiMode: "backend",
+          apiBaseUrl: "http://localhost:3000",
+        })}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /optimize shopping list/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /please check your shopping list and clarification answers, then try again/i
+    );
+  });
+
+  it("renders a safe network failure message from backend mode", async () => {
+    const user = userEvent.setup();
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("connect ECONNREFUSED 127.0.0.1")));
+
+    render(
+      <App
+        optimizeClient={createOptimizeShoppingClient({
+          apiMode: "backend",
+          apiBaseUrl: "http://localhost:3000",
+        })}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /optimize shopping list/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /maplecard could not reach the local backend/i
+    );
   });
 });

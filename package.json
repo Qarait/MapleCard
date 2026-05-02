@@ -5,8 +5,11 @@
   "type": "commonjs",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "dev:web": "npm --prefix web run dev",
+    "dev": "npm run dev:backend",
+    "dev:backend": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "dev:web": "npm --prefix web run dev -- --host 127.0.0.1 --port 5173",
+    "dev:web:backend": "npm --prefix web run dev -- --host 127.0.0.1 --port 5173 --mode backend",
+    "dev:fullstack": "concurrently -k -n backend,web -c green,blue \"npm run dev:backend\" \"npm run dev:web:backend\"",
     "build:backend": "tsc -p tsconfig.json",
     "build:web": "npm --prefix web run build",
     "build": "npm run build:backend && npm run build:web",
@@ -26,6 +29,7 @@
     "@types/supertest": "^6.0.3",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.6.3",
+    "concurrently": "^9.1.2",
     "supertest": "^7.1.1",
     "vitest": "^3.2.4"
   }
