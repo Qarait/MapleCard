@@ -102,7 +102,11 @@ function buildClarificationTemplates(
   definitions: AttributeDefinition[],
   clarificationKeys?: string[]
 ): ClarificationTemplate[] {
-  const allowedKeys = new Set(clarificationKeys ?? definitions.map((definition) => definition.key));
+  const allowedKeys = new Set(clarificationKeys ?? []);
+
+  if (allowedKeys.size === 0) {
+    return [];
+  }
 
   return definitions
     .filter((definition) => allowedKeys.has(definition.key))
@@ -622,6 +626,7 @@ export const SEED_CANONICAL_CATALOG: CanonicalCatalogSchemaRecord[] = [
     quantityPolicy: weightAmbiguousItem(["bag", "can", "package"]),
     attributeDefinitions: [stringAttribute("format", "Format", ["ground", "whole-bean", "pods"], true), stringAttribute("roast", "Roast", ["light", "medium", "dark"], true)],
     defaultAttributes: { format: "ground", roast: "medium" },
+    clarificationKeys: ["format", "roast"],
   }),
   defineSeedItem({
     id: "seed-beverages-002",

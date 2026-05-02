@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_BRIDGE_CLARIFICATION_OPTION_LIMIT,
+  extractClarificationOptionsFromTemplates,
   getQuantityPolicyForAlias,
   getQuantityPolicyForSlug,
   lookupSeedCatalogByAlias,
@@ -44,5 +46,28 @@ describe("catalog lookup", () => {
   it("returns quantity policies by slug and alias", () => {
     expect(getQuantityPolicyForSlug("bread")?.kind).toBe("countable_item");
     expect(getQuantityPolicyForAlias("yogurt")?.kind).toBe("ambiguous_bare_number_item");
+  });
+
+  it("returns an empty list when no clarification templates exist", () => {
+    expect(extractClarificationOptionsFromTemplates([])).toEqual([]);
+  });
+
+  it("de-duplicates clarification options while preserving template order", () => {
+    const options = extractClarificationOptionsFromTemplates([
+      { options: ["ground", "whole-bean", "ground"] },
+      { options: ["medium", "dark", "whole-bean"] },
+    ]);
+
+    expect(options).toEqual(["ground", "whole-bean", "medium", "dark"]);
+  });
+
+  it("enforces the clarification option limit", () => {
+    const options = extractClarificationOptionsFromTemplates([
+      { options: ["one", "two", "three", "four"] },
+      { options: ["five", "six", "seven", "eight"] },
+    ]);
+
+    expect(options).toHaveLength(DEFAULT_BRIDGE_CLARIFICATION_OPTION_LIMIT);
+    expect(options).toEqual(["one", "two", "three", "four", "five", "six"]);
   });
 });

@@ -221,7 +221,8 @@ describe("parseShoppingList catalog-aware bridge", () => {
       expect.objectContaining({
         lineType: "exact_item",
         canonicalQuery: "greek-yogurt",
-        needsUserChoice: false,
+        needsUserChoice: true,
+        suggestions: ["plain", "vanilla", "strawberry"],
       })
     );
   });
@@ -244,6 +245,30 @@ describe("parseShoppingList catalog-aware bridge", () => {
         suggestions: ["regular", "greek", "drinkable", "plain", "vanilla", "strawberry"],
       })
     );
+  });
+
+  it("surfaces clarification options for coffee from explicit catalog templates", async () => {
+    const result = await parseShoppingList("coffee");
+
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        lineType: "exact_item",
+        canonicalQuery: "coffee",
+        needsUserChoice: true,
+        suggestions: ["ground", "whole-bean", "pods", "light", "medium", "dark"],
+      })
+    );
+  });
+
+  it("keeps bread apples lettuce and pasta conservative when no clarification templates exist", async () => {
+    const result = await parseShoppingList("bread\napples\nlettuce\npasta");
+
+    expect(result).toEqual([
+      expect.objectContaining({ canonicalQuery: "bread", suggestions: [], needsUserChoice: false, confidence: 0.82 }),
+      expect.objectContaining({ canonicalQuery: "apples", suggestions: [], needsUserChoice: false, confidence: 0.82 }),
+      expect.objectContaining({ canonicalQuery: "lettuce", suggestions: [], needsUserChoice: false, confidence: 0.82 }),
+      expect.objectContaining({ canonicalQuery: "pasta", suggestions: [], needsUserChoice: false, confidence: 0.82 }),
+    ]);
   });
 
   it("keeps bare-number milk ambiguous", async () => {

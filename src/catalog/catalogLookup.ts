@@ -1,6 +1,8 @@
 import type { CanonicalCatalogSchemaRecord, QuantityPolicy } from "./catalogSchema";
 import { getSeedCanonicalCatalog } from "./seedCanonicalCatalog";
 
+export const DEFAULT_BRIDGE_CLARIFICATION_OPTION_LIMIT = 6;
+
 function collapseLookupWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
@@ -54,4 +56,35 @@ export function getQuantityPolicyForSlug(slug: string): QuantityPolicy | null {
 
 export function getQuantityPolicyForAlias(userText: string): QuantityPolicy | null {
   return lookupSeedCatalogByAlias(userText)?.quantityPolicy ?? null;
+}
+
+export function extractClarificationOptionsFromTemplates(
+  templates: Array<{ options?: string[] }>,
+  limit = DEFAULT_BRIDGE_CLARIFICATION_OPTION_LIMIT
+): string[] {
+  if (!Array.isArray(templates) || templates.length === 0) {
+    return [];
+  }
+
+  const normalizedSeen = new Set<string>();
+  const suggestions: string[] = [];
+
+  for (const template of templates) {
+    for (const option of template.options ?? []) {
+      const trimmedOption = (option ?? "").trim();
+      if (!trimmedOption) continue;
+
+      const normalizedOption = trimmedOption.toLowerCase();
+      if (normalizedSeen.has(normalizedOption)) continue;
+
+      normalizedSeen.add(normalizedOption);
+      suggestions.push(trimmedOption);
+
+      if (suggestions.length >= limit) {
+        return suggestions;
+      }
+    }
+  }
+
+  return suggestions;
 }

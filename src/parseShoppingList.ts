@@ -1,4 +1,4 @@
-import { lookupSeedCatalogByAlias, normalizeCatalogLookupText } from "./catalog/catalogLookup";
+import { extractClarificationOptionsFromTemplates, lookupSeedCatalogByAlias } from "./catalog/catalogLookup";
 import type { QuantityPolicy } from "./catalog/catalogSchema";
 import { logger } from "./utils/logger";
 
@@ -402,14 +402,8 @@ function resolveCatalogAwareQuantity(line: string, quantityPolicy: QuantityPolic
   return undefined;
 }
 
-function getBridgeClarificationSuggestions(line: string, record: { slug: string; clarificationTemplates: Array<{ options?: string[] }> }) {
-  if (record.slug !== "yogurt") return [];
-
-  const normalizedInput = normalizeCatalogLookupText(stripLeadingQuantityPhrase(line));
-  if (normalizedInput !== "yogurt") return [];
-
-  const firstOptions = record.clarificationTemplates.flatMap((template) => template.options ?? []).slice(0, 6);
-  return firstOptions;
+function getBridgeClarificationSuggestions(record: { clarificationTemplates: Array<{ options?: string[] }> }) {
+  return extractClarificationOptionsFromTemplates(record.clarificationTemplates);
 }
 
 function seedCatalogBridgeRule(line: string) {
@@ -419,7 +413,7 @@ function seedCatalogBridgeRule(line: string) {
   const record = lookupSeedCatalogByAlias(candidateText);
   if (!record) return null;
 
-  const suggestions = getBridgeClarificationSuggestions(line, record);
+  const suggestions = getBridgeClarificationSuggestions(record);
 
   return {
     lineType: "exact_item" as const,
