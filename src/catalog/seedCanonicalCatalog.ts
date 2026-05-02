@@ -177,6 +177,7 @@ export const SEED_CANONICAL_CATALOG: CanonicalCatalogSchemaRecord[] = [
     slug: "greek-yogurt",
     displayName: "Greek Yogurt",
     category: "dairy",
+    aliases: ["greek-yogurt", "yogurt"],
     quantityPolicy: weightAmbiguousItem(["tub", "g", "kg"]),
     attributeDefinitions: [stringAttribute("flavor", "Flavor", ["plain", "vanilla", "strawberry"], true), stringAttribute("fat", "Fat", ["non-fat", "low-fat", "whole"], true)],
     defaultAttributes: { flavor: "plain", fat: "whole" },

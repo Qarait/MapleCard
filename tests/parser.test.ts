@@ -142,3 +142,121 @@ describe("parseShoppingList OpenAI guardrails", () => {
     expect(detailedResult.diagnostics.parserMode).toBe("deterministic_only");
   });
 });
+
+describe("parseShoppingList catalog-aware bridge", () => {
+  it("keeps the existing known-item parser outputs stable", async () => {
+    const result = await parseShoppingList("2% milk\neggs\nbanana\nchicken breast\nwhite rice");
+
+    expect(result).toEqual([
+      {
+        rawText: "2% milk",
+        lineType: "exact_item",
+        canonicalQuery: "milk",
+        quantity: undefined,
+        attributes: { fat: "2%", lactoseFree: false, organic: false },
+        suggestions: ["milk skim", "milk 1%", "milk whole"],
+        needsUserChoice: false,
+        confidence: 0.9,
+      },
+      {
+        rawText: "eggs",
+        lineType: "exact_item",
+        canonicalQuery: "eggs",
+        quantity: undefined,
+        attributes: { size: "large", eggCount: 12, organic: false, cageFree: false },
+        suggestions: ["organic eggs", "cage-free eggs"],
+        needsUserChoice: false,
+        confidence: 0.88,
+      },
+      {
+        rawText: "banana",
+        lineType: "exact_item",
+        canonicalQuery: "banana",
+        quantity: undefined,
+        attributes: { ripeness: "yellow", organic: false },
+        suggestions: ["green bananas", "organic bananas"],
+        needsUserChoice: false,
+        confidence: 0.86,
+      },
+      {
+        rawText: "chicken breast",
+        lineType: "exact_item",
+        canonicalQuery: "chicken",
+        quantity: undefined,
+        attributes: { cut: "breast", organic: false, boneless: true, skinless: true },
+        suggestions: ["chicken thighs", "organic chicken"],
+        needsUserChoice: false,
+        confidence: 0.86,
+      },
+      {
+        rawText: "white rice",
+        lineType: "exact_item",
+        canonicalQuery: "rice",
+        quantity: undefined,
+        attributes: { type: "white", organic: false },
+        suggestions: ["brown rice", "organic rice"],
+        needsUserChoice: false,
+        confidence: 0.86,
+      },
+    ]);
+  });
+
+  it("recognizes simple seed-only exact items", async () => {
+    const result = await parseShoppingList("bread\napples\nyogurt\npasta\ncoffee\nlettuce");
+
+    expect(result.map((item) => ({ lineType: item.lineType, canonicalQuery: item.canonicalQuery }))).toEqual([
+      { lineType: "exact_item", canonicalQuery: "bread" },
+      { lineType: "exact_item", canonicalQuery: "apples" },
+      { lineType: "exact_item", canonicalQuery: "greek-yogurt" },
+      { lineType: "exact_item", canonicalQuery: "pasta" },
+      { lineType: "exact_item", canonicalQuery: "coffee" },
+      { lineType: "exact_item", canonicalQuery: "lettuce" },
+    ]);
+  });
+
+  it("keeps bare-number milk ambiguous", async () => {
+    const result = await parseShoppingList("2 milk");
+
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        lineType: "exact_item",
+        canonicalQuery: "milk",
+        quantity: undefined,
+      })
+    );
+  });
+
+  it("treats countable seed items as countable when a bare number is present", async () => {
+    const result = await parseShoppingList("3 apples\n2 bread");
+
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        canonicalQuery: "apples",
+        quantity: { value: 3, unit: "item" },
+      })
+    );
+    expect(result[1]).toEqual(
+      expect.objectContaining({
+        canonicalQuery: "bread",
+        quantity: { value: 2, unit: "item" },
+      })
+    );
+  });
+
+  it("keeps ambiguous bare-number seed items ambiguous", async () => {
+    const result = await parseShoppingList("2 pasta\n2 yogurt");
+
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        canonicalQuery: "pasta",
+        quantity: undefined,
+      })
+    );
+    expect(result[1]).toEqual(
+      expect.objectContaining({
+        canonicalQuery: "greek-yogurt",
+        quantity: undefined,
+      })
+    );
+  });
+});

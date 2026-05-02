@@ -1,3 +1,5 @@
+import { lookupSeedCatalogByAlias } from "./catalog/catalogLookup";
+import type { QuantityPolicy } from "./catalog/catalogSchema";
 import { logger } from "./utils/logger";
 
 export type ParsedLine = {
@@ -107,6 +109,16 @@ const CATEGORY_TO_SUGGESTED_ITEMS: Record<string, string[]> = {
 
 function normalizeText(s: string) {
   return s.trim().toLowerCase();
+}
+
+function stripLeadingQuantityPhrase(line: string) {
+  return line
+    .trim()
+    .replace(
+      /^(\d+(?:\.\d+)?)\s*(l|lt|liter|litre|ml|kg|g|lb|lbs|pound|pounds|item|items|dozen|dozens|bunch|bunches|box|boxes|bag|bags|package|packages|pack|packs|jar|jars|bottle|bottles|tub|tubs|can|cans|roll|rolls)?\s+/i,
+      ""
+    )
+    .trim();
 }
 
 function parseQuantityFromLine(line: string): { value?: number; unit?: string } | undefined {
@@ -366,6 +378,45 @@ function riceRule(line: string) {
     quantity: finalQuantity,
     needsUserChoice: false,
     confidence,
+  };
+}
+
+function resolveCatalogAwareQuantity(line: string, quantityPolicy: QuantityPolicy) {
+  const quantity = parseQuantityFromLine(line);
+
+  if (!quantity || quantity.value == null) return undefined;
+  if (quantity.unit != null) return quantity;
+
+  if (quantityPolicy.kind === "countable_item") {
+    return { value: quantity.value, unit: quantityPolicy.defaultUnit };
+  }
+
+  if (quantityPolicy.kind === "volume_based_item" && quantityPolicy.bareNumberInterpretation === "volume") {
+    return { value: quantity.value, unit: quantityPolicy.defaultUnit };
+  }
+
+  if (quantityPolicy.kind === "weight_based_item" && quantityPolicy.bareNumberInterpretation === "package_count") {
+    return { value: quantity.value };
+  }
+
+  return undefined;
+}
+
+function seedCatalogBridgeRule(line: string) {
+  const candidateText = stripLeadingQuantityPhrase(line);
+  if (!candidateText) return null;
+
+  const record = lookupSeedCatalogByAlias(candidateText);
+  if (!record) return null;
+
+  return {
+    lineType: "exact_item" as const,
+    canonicalQuery: record.slug,
+    quantity: resolveCatalogAwareQuantity(line, record.quantityPolicy),
+    attributes: { ...(record.default_attributes_json ?? {}) },
+    suggestions: [],
+    needsUserChoice: false,
+    confidence: 0.82,
   };
 }
 
@@ -729,6 +780,12 @@ export async function parseShoppingListDetailed(rawInput: string): Promise<Parse
     const rice = riceRule(rawText);
     if (rice) {
       parsed[i] = buildParsedLineBase(rawText, rice);
+      continue;
+    }
+
+    const seedCatalogBridgeItem = seedCatalogBridgeRule(rawText);
+    if (seedCatalogBridgeItem) {
+      parsed[i] = buildParsedLineBase(rawText, seedCatalogBridgeItem);
       continue;
     }
 

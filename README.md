@@ -14,7 +14,7 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 
 1. The API accepts raw shopping-list text through `POST /api/optimize`.
 2. `parseShoppingList` asynchronously parses each line into structured `ParsedLine` objects.
-3. Parsing uses deterministic parser rules first, plus an optional OpenAI path for ambiguous meal-intent lines.
+3. Parsing uses deterministic parser rules first, plus a limited seed-catalog lookup bridge for simple exact-item lines, plus an optional OpenAI path for ambiguous meal-intent lines.
 4. `matchParsedLineToCanonical` performs token-based and Jaccard-style matching against canonical items.
 5. `optimizeService` uses `selectBestStoreWithAlternatives` to produce a winning store and alternative store options.
 6. `optimizeService` resolves catalog and inventory data through provider interfaces, with the runtime source selected through `MAPLECARD_CATALOG_SOURCE`.
@@ -79,7 +79,9 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 ## Notes On Current Implementation
 
 - `parseShoppingList` is async.
-- The parser has hardcoded rule coverage for a small synthetic item set.
+- The parser still has hardcoded rule coverage for the original synthetic item set.
+- The parser now also uses the MapleCard-owned seed catalog as a bridge for simple exact-item lookups.
+- This parser bridge is intentionally limited and is not a full schema-driven parser yet.
 - The OpenAI branch is only used for ambiguous `meal_intent` lines.
 - Store scoring returns both a `winner` and `alternatives`.
 - Missing store ETA values are returned as `null`, not `0`.
@@ -140,11 +142,18 @@ Validation expectations:
 - The seed is schema-validated through the Sprint 6 catalog schema helpers and is intended to become the stable internal catalog truth before any database is added.
 - MapleCard also includes a seed catalog adapter in `src/services/seedCatalogProvider.ts` that can project the seed into the runtime `CanonicalItem` provider shape.
 - The seed catalog is being adapted toward runtime use, but the synthetic provider remains the default runtime catalog source until store inventory compatibility is solved.
+- The parser now also uses seed-catalog aliases and quantity policy in a limited bridge mode for simple exact-item recognition.
 - MapleCard now also includes an explicit inventory bridge for mapped core items only, so seed catalog records can be paired with adapted synthetic inventory in compatibility tests.
 - The bridge is limited to mapped legacy synthetic IDs for milk, eggs, bananas, chicken breast, and rice; unmapped seed items still do not have runtime inventory coverage.
 - The bridge can now be selected at runtime through `MAPLECARD_CATALOG_SOURCE=seed_bridge`, but it remains experimental and is not the default.
 - Open Food Facts, USDA, and CNF remain possible future enrichment sources only; they are not the current source of truth.
 - Store price, store inventory, and ETA data are still synthetic today and are not yet backed by real retailer integrations.
+
+## Parser Roadmap
+
+- The current catalog-aware parser support is a bridge only, not a full schema-driven parser rewrite.
+- Existing hardcoded deterministic rules for milk, eggs, banana, chicken, and rice still remain in place.
+- Future work should move item attributes, aliases, and quantity decisions more fully into the catalog schema over time.
 
 ## CI
 
