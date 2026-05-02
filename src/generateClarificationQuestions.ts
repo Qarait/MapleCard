@@ -18,6 +18,7 @@ export type ClarificationInput = CanonicalMatch & {
   rawText: string;
   // Derived from ParsedLine; if present, it takes priority over low confidence.
   needsUserChoice?: boolean;
+  resolvedClarificationKeys?: string[];
 };
 
 function clampNonEmptyStrings(list: string[]): string[] {
@@ -132,6 +133,11 @@ function determineOptions(input: ClarificationInput): { options: string[]; key?:
   return { options: cleaned };
 }
 
+function hasResolvedAttribute(input: ClarificationInput, key: string): boolean {
+  if (!key) return false;
+  return (input.resolvedClarificationKeys ?? []).includes(key);
+}
+
 function toPublicClarificationQuestion(question: InternalClarificationQuestion): ClarificationQuestion {
   return {
     id: question.id,
@@ -150,10 +156,13 @@ export function generateInternalClarificationQuestions(matches: ClarificationInp
 
     const seedRecord = lookupSeedCatalogById(m.canonicalItemId);
     if (seedRecord) {
+      const unresolvedCandidates = extractCatalogClarificationQuestionCandidates(seedRecord).filter(
+        (candidate) => !hasResolvedAttribute(m, candidate.attributeKey)
+      );
       const catalogQuestions = buildInternalCatalogClarificationQuestions({
         rawText: m.rawText,
         canonicalItemId: m.canonicalItemId,
-        candidates: extractCatalogClarificationQuestionCandidates(seedRecord),
+        candidates: unresolvedCandidates,
       });
       if (catalogQuestions.length > 0) {
         out.push(...catalogQuestions);
@@ -164,6 +173,8 @@ export function generateInternalClarificationQuestions(matches: ClarificationInp
     const { options, key } = determineOptions(m);
     const fallbackOptions = clampNonEmptyStrings(m.clarificationSuggestions ?? []);
     const finalOptions = options.length > 0 ? options.slice(0, 6) : fallbackOptions.slice(0, 6);
+
+    if (key && hasResolvedAttribute(m, key)) continue;
 
     out.push(
       buildInternalClarificationQuestion({

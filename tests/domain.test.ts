@@ -5,7 +5,12 @@ import { createCanonicalMatcher } from "../src/matchParsedLineToCanonical";
 import { selectBestStore, selectBestStoreWithAlternatives } from "../src/selectBestStore";
 import type { CanonicalCatalogProvider, StoreInventoryProvider } from "../src/services/catalogProvider";
 import { OptimizeServiceError } from "../src/services/optimizeServiceError";
-import { optimizeShopping, DEFAULT_CATALOG_PROVIDERS, getDefaultCatalogProviders } from "../src/services/optimizeService";
+import {
+  applyClarificationAnswersToInputs,
+  optimizeShopping,
+  DEFAULT_CATALOG_PROVIDERS,
+  getDefaultCatalogProviders,
+} from "../src/services/optimizeService";
 import { seedCompatibleSyntheticStoreInventoryProvider } from "../src/services/seedInventoryBridge";
 import { seedCanonicalCatalogProvider } from "../src/services/seedCatalogProvider";
 import { syntheticCanonicalCatalogProvider, syntheticStoreInventoryProvider } from "../src/services/syntheticCatalogProvider";
@@ -168,6 +173,53 @@ describe("domain behavior", () => {
     ]);
 
     expect(questions).toEqual([]);
+  });
+
+  it("applies a safe fallback clarification answer and removes the answered question", () => {
+    const parsedLines = [
+      {
+        rawText: "milk",
+        lineType: "exact_item" as const,
+        canonicalQuery: "milk",
+        quantity: undefined,
+        attributes: {},
+        suggestions: [],
+        needsUserChoice: true,
+        confidence: 0.5,
+      },
+    ];
+
+    const updatedInputs = applyClarificationAnswersToInputs(
+      [
+        {
+          rawText: "milk",
+          canonicalItemId: "item-1",
+          resolvedName: "Milk",
+          matchConfidence: 0.5,
+          usedDefault: false,
+          lowConfidence: true,
+          needsClarification: true,
+          clarificationSuggestions: ["fat must be one of: skim, 1%, 2%, whole"],
+          requestedAttributes: {},
+          needsUserChoice: true,
+          resolvedClarificationKeys: [],
+        },
+      ],
+      parsedLines,
+      [
+        {
+          questionId: "cq_milk__item-1__na__fat__which-milk-fat-level-do-you-want",
+          rawText: "milk",
+          attributeKey: "fat",
+          value: "whole",
+        },
+      ]
+    );
+
+    expect(updatedInputs[0].requestedAttributes).toEqual({ fat: "whole" });
+    expect(updatedInputs[0].needsUserChoice).toBe(false);
+    expect(parsedLines[0].attributes).toEqual({ fat: "whole" });
+    expect(generateClarificationQuestions(updatedInputs as any)).toEqual([]);
   });
 
   it("selects the basic winning store deterministically", () => {

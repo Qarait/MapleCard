@@ -1,11 +1,18 @@
 import { parseShoppingList } from "../parseShoppingList";
+import type { ParsedLine } from "../parseShoppingList";
 import { createCanonicalMatcher } from "../matchParsedLineToCanonical";
 import type { CanonicalMatch } from "../matchParsedLineToCanonical";
 import { selectBestStoreWithAlternatives } from "../selectBestStore";
 import type { SelectedStoreResult } from "../selectBestStore";
-import { generateClarificationQuestions } from "../generateClarificationQuestions";
+import {
+  generateClarificationQuestions,
+  generateInternalClarificationQuestions,
+  type ClarificationInput,
+} from "../generateClarificationQuestions";
 import { getCatalogSource } from "../config/catalogSourceConfig";
 import { logger } from "../utils/logger";
+import { normalizeAttributeRecord } from "../normalizeAttributes";
+import { applyClarificationAnswer } from "../clarifications/clarificationContract";
 import type { CatalogProviders } from "./catalogProvider";
 import { OptimizeServiceError } from "./optimizeServiceError";
 import { validateCanonicalItems, validateStoreProducts } from "./providerValidation";
@@ -29,6 +36,13 @@ export type OptimizeResponse = {
   winner: SelectedStoreResult;
   alternatives: SelectedStoreResult[];
   clarifications: Array<{ id: string; rawText: string; question: string; options: string[]; attributeKey?: string }>;
+};
+
+export type OptimizeClarificationAnswer = {
+  questionId: string;
+  rawText: string;
+  attributeKey?: string;
+  value: string;
 };
 
 export const DEFAULT_CATALOG_PROVIDERS: CatalogProviders = {
@@ -61,6 +75,106 @@ function logProviderWarning(message: string, diagnostics: ProviderDiagnostics, d
     ...diagnostics,
     ...(details ?? {}),
   });
+}
+
+function buildClarificationInputs(parsedLines: ParsedLine[], matches: CanonicalMatch[]): ClarificationInput[] {
+  return parsedLines.map((pl, idx) => ({
+    ...matches[idx],
+    rawText: pl.rawText,
+    needsUserChoice: pl.needsUserChoice,
+    resolvedClarificationKeys: [],
+  }));
+}
+
+function didRequestedAttributesChange(before: Record<string, any>, after: Record<string, any>): boolean {
+  const beforeEntries = Object.entries(before);
+  const afterEntries = Object.entries(after);
+  if (beforeEntries.length !== afterEntries.length) return true;
+
+  return beforeEntries.some(([key, value]) => after[key] !== value);
+}
+
+export function applyClarificationAnswersToInputs(
+  clarificationInputs: ClarificationInput[],
+  parsedLines: ParsedLine[],
+  clarificationAnswers: OptimizeClarificationAnswer[]
+): ClarificationInput[] {
+  const updatedInputs: ClarificationInput[] = clarificationInputs.map((input) => ({
+    ...input,
+    requestedAttributes: normalizeAttributeRecord(input.requestedAttributes ?? {}),
+    resolvedClarificationKeys: [...(input.resolvedClarificationKeys ?? [])],
+  }));
+
+  for (const answer of clarificationAnswers) {
+    for (let idx = 0; idx < updatedInputs.length; idx++) {
+      const input = updatedInputs[idx];
+      if (input.rawText !== answer.rawText) continue;
+
+      const knownQuestion = generateInternalClarificationQuestions([input]).find(
+        (question) =>
+          question.id === answer.questionId &&
+          question.rawText === answer.rawText &&
+          (answer.attributeKey == null || answer.attributeKey === question.attributeKey)
+      );
+
+      if (!knownQuestion) continue;
+
+      const beforeAttributes = normalizeAttributeRecord(input.requestedAttributes ?? {});
+      const updatedTarget = applyClarificationAnswer(
+        {
+          rawText: input.rawText,
+          canonicalItemId: input.canonicalItemId,
+          requestedAttributes: beforeAttributes,
+          needsUserChoice: input.needsUserChoice ?? false,
+        },
+        knownQuestion,
+        {
+          questionId: answer.questionId,
+          rawText: answer.rawText,
+          attributeKey: answer.attributeKey,
+          value: answer.value,
+        }
+      );
+
+      const afterAttributes = normalizeAttributeRecord(updatedTarget.requestedAttributes ?? {});
+      const answerApplied = didRequestedAttributesChange(beforeAttributes, afterAttributes);
+      if (!answerApplied) break;
+
+      const provisionalInput: ClarificationInput = {
+        ...input,
+        requestedAttributes: afterAttributes,
+        resolvedClarificationKeys: knownQuestion.attributeKey
+          ? Array.from(new Set([...(input.resolvedClarificationKeys ?? []), knownQuestion.attributeKey]))
+          : [...(input.resolvedClarificationKeys ?? [])],
+        usedDefault: false,
+      };
+
+      const stillNeedsUserChoice = generateInternalClarificationQuestions([provisionalInput]).length > 0;
+
+      updatedInputs[idx] = {
+        ...provisionalInput,
+        needsUserChoice: stillNeedsUserChoice,
+      };
+
+      parsedLines[idx] = {
+        ...parsedLines[idx],
+        attributes: normalizeAttributeRecord({
+          ...(parsedLines[idx].attributes ?? {}),
+          ...(knownQuestion.attributeKey ? { [knownQuestion.attributeKey]: answer.value } : {}),
+        }),
+        needsUserChoice: stillNeedsUserChoice,
+      };
+
+      break;
+    }
+  }
+
+  return updatedInputs;
+}
+
+function toCanonicalMatch(input: ClarificationInput): CanonicalMatch {
+  const { rawText: _rawText, needsUserChoice: _needsUserChoice, resolvedClarificationKeys: _resolvedClarificationKeys, ...match } = input;
+  return match;
 }
 
 async function loadCanonicalItems(providers: CatalogProviders, diagnostics: ProviderDiagnostics) {
@@ -133,7 +247,8 @@ async function loadStoreProducts(providers: CatalogProviders, diagnostics: Provi
 
 export async function optimizeShopping(
   rawInput: string,
-  providers: CatalogProviders = getDefaultCatalogProviders()
+  providers: CatalogProviders = getDefaultCatalogProviders(),
+  clarificationAnswers: OptimizeClarificationAnswer[] = []
 ): Promise<OptimizeResponse> {
   const providerDiagnostics: ProviderDiagnostics = {
     canonicalItemCount: 0,
@@ -147,21 +262,21 @@ export async function optimizeShopping(
   const matchParsedLineToCanonical = createCanonicalMatcher(canonicalItems);
 
   const matches = parsedLines.map((pl) => matchParsedLineToCanonical(pl));
+  const clarificationInputs = applyClarificationAnswersToInputs(
+    buildClarificationInputs(parsedLines, matches),
+    parsedLines,
+    clarificationAnswers
+  );
+  const resolvedMatches = clarificationInputs.map(toCanonicalMatch);
   const storeProducts = await loadStoreProducts(providers, providerDiagnostics);
 
-  const { winner, alternatives } = selectBestStoreWithAlternatives(matches, storeProducts);
-
-  const clarificationInputs = parsedLines.map((pl, idx) => ({
-    ...matches[idx],
-    rawText: pl.rawText,
-    needsUserChoice: pl.needsUserChoice,
-  }));
+  const { winner, alternatives } = selectBestStoreWithAlternatives(resolvedMatches, storeProducts);
 
   const clarifications = generateClarificationQuestions(clarificationInputs as any);
 
   const items = parsedLines.map((pl, idx) => ({
     ...pl,
-    match: matches[idx],
+    match: resolvedMatches[idx],
   }));
 
   return {

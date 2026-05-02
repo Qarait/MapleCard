@@ -6,10 +6,12 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 
 - Main endpoint: `POST /api/optimize`
 - Health check: `GET /healthz`
-- Request body: `{ rawInput: string }`
+- Request body: `{ rawInput: string, clarificationAnswers?: Array<{ questionId: string; rawText: string; attributeKey?: string; value: string }> }`
 - Response body includes `items`, `winner`, `alternatives`, and `clarifications`
 - `clarifications` now include a stable `id` for each question while preserving `rawText`, `question`, and `options`.
 - Frontend or PWA clients should treat clarification `id` as the primary key for future answer submission flows.
+- Frontend or PWA clients should submit clarification answers using the question `id` plus the selected answer `value`; `attributeKey` is optional metadata.
+- Clarification answer submission is currently stateless; MapleCard does not persist user sessions or clarification history yet.
 - `winner.etaMin` and alternative `etaMin` values are `number | null`; `null` means ETA is unknown
 
 ## Runtime Flow
@@ -20,7 +22,7 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 4. `matchParsedLineToCanonical` performs token-based and Jaccard-style matching against canonical items.
 5. `optimizeService` uses `selectBestStoreWithAlternatives` to produce a winning store and alternative store options.
 6. `optimizeService` resolves catalog and inventory data through provider interfaces, with the runtime source selected through `MAPLECARD_CATALOG_SOURCE`.
-7. Clarification questions are generated for low-confidence or user-choice-required cases.
+7. Clarification questions are generated for low-confidence or user-choice-required cases, and optional clarification answers can be applied before store re-optimization.
 
 ## Runtime Catalog Source Configuration
 
@@ -87,6 +89,7 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 - Seed catalog clarification templates now also influence user-facing clarification questions.
 - Sprint 14 adds internal clarification question ids and answer-payload readiness for future frontend or PWA answer flows.
 - Sprint 15 exposes stable clarification ids publicly so frontend clients can safely persist and submit user choices later.
+- Sprint 16 allows `POST /api/optimize` to accept optional clarification answers and rerun optimization without adding a separate answer endpoint.
 - This parser bridge is intentionally limited and is not a full schema-driven parser yet.
 - Generic product terms should not be silently over-mapped to a more specific variant when user intent is broader.
 - The OpenAI branch is only used for ambiguous `meal_intent` lines.
@@ -164,8 +167,9 @@ Validation expectations:
 - Future work should move all ambiguity handling and question generation more fully into schema-backed catalog logic.
 - This is a step toward schema-driven UX rather than the final parser architecture.
 - Future work should move item attributes, aliases, and quantity decisions more fully into the catalog schema over time.
-- Frontend or PWA answer submission is not yet exposed as an API endpoint; Sprint 14 only adds internal readiness for that flow.
+- Frontend or PWA answer submission is still stateless and uses the existing optimize endpoint; there is no user session or database persistence yet.
 - Public clarification objects still retain `rawText`, `question`, and `options` for backward compatibility even though `id` should now be treated as the primary answer key.
+- Malformed clarification answer payloads are rejected with `400` errors, while structurally valid but inapplicable answers are ignored safely.
 
 ## CI
 
