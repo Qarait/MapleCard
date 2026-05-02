@@ -35,11 +35,12 @@ Option 2:
 npm run dev:fullstack
 ```
 
-If you prefer env-based startup instead of the built-in backend-mode script, copy `web/.env.example` to `web/.env.local` and set:
+If you prefer env-based startup instead of the built-in backend-mode script, copy the checked-in `web/.env.example` file to `web/.env.local` and switch it to backend mode:
 
 ```env
-VITE_MAPLECARD_API_MODE=backend
 VITE_MAPLECARD_API_BASE_URL=http://localhost:3000
+# VITE_MAPLECARD_API_MODE=backend
+VITE_MAPLECARD_API_MODE=backend
 ```
 
 Expected result:
