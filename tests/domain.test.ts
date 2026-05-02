@@ -48,6 +48,84 @@ describe("domain behavior", () => {
     expect(questions[0].options).toEqual(["skim", "1%", "2%", "whole"]);
   });
 
+  it("generates structured clarification questions for generic yogurt", () => {
+    const questions = generateClarificationQuestions([
+      {
+        rawText: "yogurt",
+        canonicalItemId: "seed-dairy-007",
+        resolvedName: "Yogurt",
+        matchConfidence: 0.78,
+        usedDefault: true,
+        lowConfidence: false,
+        needsClarification: false,
+        clarificationSuggestions: ["regular", "greek", "drinkable", "plain", "vanilla", "strawberry"],
+        requestedAttributes: {},
+        needsUserChoice: true,
+      },
+    ]);
+
+    expect(questions).toEqual([
+      { rawText: "yogurt", question: "Which yogurt type do you want?", options: ["regular", "greek", "drinkable"] },
+      { rawText: "yogurt", question: "Which yogurt flavor do you want?", options: ["plain", "vanilla", "strawberry"] },
+      { rawText: "yogurt", question: "Which yogurt fat do you want?", options: ["non-fat", "low-fat", "whole"] },
+      { rawText: "yogurt", question: "Which yogurt size do you want?", options: ["cup", "tub", "multi-pack"] },
+    ]);
+  });
+
+  it("generates structured clarification questions for greek yogurt and coffee", () => {
+    const questions = generateClarificationQuestions([
+      {
+        rawText: "greek yogurt",
+        canonicalItemId: "seed-dairy-003",
+        resolvedName: "Greek Yogurt",
+        matchConfidence: 0.78,
+        usedDefault: true,
+        lowConfidence: false,
+        needsClarification: false,
+        clarificationSuggestions: ["plain", "vanilla", "strawberry"],
+        requestedAttributes: {},
+        needsUserChoice: true,
+      },
+      {
+        rawText: "coffee",
+        canonicalItemId: "seed-beverages-001",
+        resolvedName: "Coffee",
+        matchConfidence: 0.78,
+        usedDefault: true,
+        lowConfidence: false,
+        needsClarification: false,
+        clarificationSuggestions: ["ground", "whole-bean", "pods", "light", "medium", "dark"],
+        requestedAttributes: {},
+        needsUserChoice: true,
+      },
+    ]);
+
+    expect(questions).toEqual([
+      { rawText: "greek yogurt", question: "Which greek yogurt flavor do you want?", options: ["plain", "vanilla", "strawberry"] },
+      { rawText: "coffee", question: "Which coffee format do you want?", options: ["ground", "whole-bean", "pods"] },
+      { rawText: "coffee", question: "Which coffee roast do you want?", options: ["light", "medium", "dark"] },
+    ]);
+  });
+
+  it("does not produce unnecessary catalog clarification questions for items without templates", () => {
+    const questions = generateClarificationQuestions([
+      {
+        rawText: "bread",
+        canonicalItemId: "seed-bakery-001",
+        resolvedName: "Bread",
+        matchConfidence: 0.82,
+        usedDefault: true,
+        lowConfidence: false,
+        needsClarification: false,
+        clarificationSuggestions: [],
+        requestedAttributes: {},
+        needsUserChoice: false,
+      },
+    ]);
+
+    expect(questions).toEqual([]);
+  });
+
   it("selects the basic winning store deterministically", () => {
     const matchParsedLineToCanonical = createCanonicalMatcher(getSyntheticCanonicalItems());
     const matches = [

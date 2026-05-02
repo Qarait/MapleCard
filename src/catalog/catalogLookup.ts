@@ -3,6 +3,14 @@ import { getSeedCanonicalCatalog } from "./seedCanonicalCatalog";
 
 export const DEFAULT_BRIDGE_CLARIFICATION_OPTION_LIMIT = 6;
 
+export type CatalogClarificationQuestionCandidate = {
+  canonicalItemId: string;
+  slug: string;
+  attributeKey: string;
+  question: string;
+  options: string[];
+};
+
 function collapseLookupWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
@@ -87,4 +95,36 @@ export function extractClarificationOptionsFromTemplates(
   }
 
   return suggestions;
+}
+
+function buildFallbackClarificationQuestion(record: CanonicalCatalogSchemaRecord, attributeKey: string): string {
+  const definition = record.attributeDefinitions.find((item) => item.key === attributeKey);
+  const label = definition?.label ?? attributeKey;
+  return `Which ${record.display_name.toLowerCase()} ${label.toLowerCase()} do you want?`;
+}
+
+export function extractCatalogClarificationQuestionCandidates(
+  record: CanonicalCatalogSchemaRecord,
+  limit = DEFAULT_BRIDGE_CLARIFICATION_OPTION_LIMIT
+): CatalogClarificationQuestionCandidate[] {
+  if (!record || !Array.isArray(record.clarificationTemplates) || record.clarificationTemplates.length === 0) {
+    return [];
+  }
+
+  return record.clarificationTemplates
+    .map((template) => {
+      const options = extractClarificationOptionsFromTemplates([{ options: template.options }], limit);
+      if (options.length === 0) {
+        return null;
+      }
+
+      return {
+        canonicalItemId: record.id,
+        slug: record.slug,
+        attributeKey: template.attributeKey,
+        question: (template.question ?? "").trim() || buildFallbackClarificationQuestion(record, template.attributeKey),
+        options,
+      } satisfies CatalogClarificationQuestionCandidate;
+    })
+    .filter((candidate): candidate is CatalogClarificationQuestionCandidate => candidate != null);
 }

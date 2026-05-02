@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  extractCatalogClarificationQuestionCandidates,
   DEFAULT_BRIDGE_CLARIFICATION_OPTION_LIMIT,
   extractClarificationOptionsFromTemplates,
   getQuantityPolicyForAlias,
@@ -69,5 +70,86 @@ describe("catalog lookup", () => {
 
     expect(options).toHaveLength(DEFAULT_BRIDGE_CLARIFICATION_OPTION_LIMIT);
     expect(options).toEqual(["one", "two", "three", "four", "five", "six"]);
+  });
+
+  it("builds structured clarification question candidates from a seed record", () => {
+    const record = lookupSeedCatalogById("seed-dairy-007");
+
+    const candidates = extractCatalogClarificationQuestionCandidates(record!);
+
+    expect(candidates).toEqual([
+      {
+        canonicalItemId: "seed-dairy-007",
+        slug: "yogurt",
+        attributeKey: "type",
+        question: "Which yogurt type do you want?",
+        options: ["regular", "greek", "drinkable"],
+      },
+      {
+        canonicalItemId: "seed-dairy-007",
+        slug: "yogurt",
+        attributeKey: "flavor",
+        question: "Which yogurt flavor do you want?",
+        options: ["plain", "vanilla", "strawberry"],
+      },
+      {
+        canonicalItemId: "seed-dairy-007",
+        slug: "yogurt",
+        attributeKey: "fat",
+        question: "Which yogurt fat do you want?",
+        options: ["non-fat", "low-fat", "whole"],
+      },
+      {
+        canonicalItemId: "seed-dairy-007",
+        slug: "yogurt",
+        attributeKey: "size",
+        question: "Which yogurt size do you want?",
+        options: ["cup", "tub", "multi-pack"],
+      },
+    ]);
+  });
+
+  it("de-duplicates and limits options inside clarification question candidates", () => {
+    const candidates = extractCatalogClarificationQuestionCandidates({
+      id: "seed-test-001",
+      slug: "test-item",
+      display_name: "Test Item",
+      category: "pantry",
+      default_attributes_json: {},
+      attribute_schema_json: {},
+      aliases_json: [],
+      aliases: [],
+      attributeDefinitions: [
+        {
+          key: "format",
+          label: "Format",
+          valueType: "string",
+          options: [],
+        },
+      ],
+      quantityPolicy: {
+        kind: "ambiguous_bare_number_item",
+        allowedUnits: ["item"],
+        bareNumberInterpretation: "ambiguous",
+      },
+      clarificationTemplates: [
+        {
+          attributeKey: "format",
+          question: "",
+          options: ["one", "two", "two", "three", "four", "five", "six", "seven"],
+        },
+      ],
+      categoryMetadata: { key: "pantry", displayName: "Pantry" },
+    });
+
+    expect(candidates).toEqual([
+      {
+        canonicalItemId: "seed-test-001",
+        slug: "test-item",
+        attributeKey: "format",
+        question: "Which test item format do you want?",
+        options: ["one", "two", "three", "four", "five", "six"],
+      },
+    ]);
   });
 });

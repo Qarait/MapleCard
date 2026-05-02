@@ -1,4 +1,5 @@
 import type { CanonicalMatch } from "./matchParsedLineToCanonical";
+import { extractCatalogClarificationQuestionCandidates, lookupSeedCatalogById } from "./catalog/catalogLookup";
 
 export type ClarificationQuestion = {
   rawText: string;
@@ -124,6 +125,17 @@ function determineOptions(input: ClarificationInput): { options: string[]; key?:
   return { options: cleaned };
 }
 
+function getCatalogClarificationQuestions(input: ClarificationInput): ClarificationQuestion[] {
+  const seedRecord = lookupSeedCatalogById(input.canonicalItemId);
+  if (!seedRecord) return [];
+
+  return extractCatalogClarificationQuestionCandidates(seedRecord).map((candidate) => ({
+    rawText: input.rawText,
+    question: candidate.question,
+    options: candidate.options,
+  }));
+}
+
 /**
  * Generate rule-based clarification questions.
  * No LLM calls.
@@ -133,6 +145,12 @@ export function generateClarificationQuestions(matches: ClarificationInput[]): C
   for (const m of matches) {
     const needsQuestion = m.needsUserChoice === true || m.matchConfidence < 0.65 || m.lowConfidence === true || m.needsClarification === true;
     if (!needsQuestion) continue;
+
+    const catalogQuestions = getCatalogClarificationQuestions(m);
+    if (catalogQuestions.length > 0) {
+      out.push(...catalogQuestions);
+      continue;
+    }
 
     const { options, key } = determineOptions(m);
     const fallbackOptions = clampNonEmptyStrings(m.clarificationSuggestions ?? []);
