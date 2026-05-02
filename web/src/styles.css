@@ -1,0 +1,276 @@
+:root {
+  font-family: Aptos, "Segoe UI", sans-serif;
+  color: #1f2937;
+  background:
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.18), transparent 32%),
+    radial-gradient(circle at bottom left, rgba(190, 24, 93, 0.14), transparent 28%),
+    linear-gradient(180deg, #f6f6ef 0%, #fffaf2 100%);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  display: grid;
+  gap: 1rem;
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.hero-card,
+.panel,
+.winner-card,
+.secondary-card,
+.clarification-group,
+.question-card,
+.answer-result-card {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.84);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+}
+
+.hero-card,
+.panel {
+  padding: 1.1rem;
+}
+
+.eyebrow,
+.panel-step,
+.card-label,
+.answer-status,
+.group-subtitle,
+.question-id {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+}
+
+.eyebrow,
+.panel-step,
+.card-label,
+.answer-status {
+  color: #0f766e;
+  font-weight: 700;
+}
+
+.hero-card h1,
+.panel h2,
+.question-card h3,
+.winner-card h3 {
+  margin: 0;
+}
+
+.hero-copy,
+.muted-copy,
+.group-subtitle,
+.question-id,
+.answer-meta {
+  color: #4b5563;
+}
+
+.mode-pill-row,
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.mode-pill,
+.line-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: #ecfeff;
+  color: #155e75;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.82rem;
+}
+
+.panel-heading,
+.group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 0.45rem;
+  font-weight: 700;
+}
+
+.shopping-input,
+.payload-preview {
+  width: 100%;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 0.9rem 1rem;
+}
+
+.shopping-input {
+  resize: vertical;
+  min-height: 11rem;
+  margin-bottom: 0.85rem;
+}
+
+.primary-button,
+.chip-button {
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+}
+
+.primary-button {
+  background: linear-gradient(135deg, #0f766e, #155e75);
+  color: #f8fafc;
+  padding: 0.9rem 1.2rem;
+  font-weight: 700;
+  box-shadow: 0 12px 24px rgba(21, 94, 117, 0.2);
+}
+
+.chip-button {
+  background: #fff7ed;
+  color: #9a3412;
+  padding: 0.55rem 0.9rem;
+}
+
+.primary-button:hover,
+.chip-button:hover {
+  transform: translateY(-1px);
+}
+
+.primary-button:disabled,
+.chip-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.result-grid,
+.clarification-groups {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.winner-card,
+.secondary-card,
+.clarification-group,
+.question-card,
+.answer-result-card {
+  padding: 1rem;
+}
+
+.metric-list,
+.item-list,
+.store-list,
+.answer-results-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.metric-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.metric-list dt {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.metric-list dd {
+  margin: 0.15rem 0 0;
+  font-weight: 700;
+}
+
+.store-list,
+.item-list,
+.answer-results-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.store-list-item,
+.item-list-item {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.store-list-item:first-child,
+.item-list-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.item-list-item p {
+  margin: 0.2rem 0 0;
+  color: #6b7280;
+}
+
+.item-list-item code,
+.payload-preview {
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 0.82rem;
+}
+
+.clarification-group {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.group-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.error-banner {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-radius: 0.85rem;
+  padding: 0.85rem 1rem;
+}
+
+.payload-preview {
+  overflow-x: auto;
+}
+
+@media (min-width: 720px) {
+  .app-shell {
+    padding: 1.5rem;
+  }
+
+  .result-grid {
+    grid-template-columns: 1.2fr 1fr;
+  }
+}

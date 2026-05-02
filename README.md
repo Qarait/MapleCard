@@ -27,6 +27,14 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 - Answer submission is stateless.
 - MapleCard does not persist user sessions or user-specific answer history yet.
 
+## Frontend / PWA
+
+- MapleCard now includes a scaffolded mobile-first web client under `web/`.
+- The frontend defaults to fixture mode so UI development and tests do not require the backend to be running.
+- A real backend integration mode is scaffolded through frontend config, but it is not the default yet.
+- There is no production deployment, user login, or installable production PWA pipeline yet.
+- There is no real checkout, retailer handoff, or shoppable external integration yet.
+
 ## Runtime Flow
 
 1. The API accepts raw shopping-list text through `POST /api/optimize`.

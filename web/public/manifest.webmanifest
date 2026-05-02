@@ -1,0 +1,10 @@
+{
+  "name": "MapleCard Mobile",
+  "short_name": "MapleCard",
+  "description": "Mobile-first MapleCard shopping assistant scaffold",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f6ef",
+  "theme_color": "#0f766e",
+  "icons": []
+}
