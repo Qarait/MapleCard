@@ -2,6 +2,12 @@
 
 This guide prepares MapleCard for MVP staging deployment without changing backend runtime behavior or adding deployment automation from code.
 
+Config files now reduce dashboard copy-paste errors:
+
+- `railway.json` codifies the backend build command, start command, health check path, and restart policy.
+- `web/vercel.json` codifies the frontend framework, install command, build command, and output directory.
+- Dashboard environment variables are still required on Railway and Vercel.
+
 ## Railway Backend Setup
 
 - Root directory: `/`
@@ -9,6 +15,7 @@ This guide prepares MapleCard for MVP staging deployment without changing backen
 - Start command: `npm start`
 - Health check path: `/healthz`
 - Leave `PORT` unset unless Railway explicitly requires otherwise.
+- `railway.json` now records these backend build and deploy settings in the repository.
 
 Recommended backend environment variables:
 
@@ -32,6 +39,7 @@ Notes:
 
 - `seed_bridge` is the recommended staging runtime source so the frontend can exercise richer clarification flows, but it is not the code default.
 - Keep `OPENAI_API_KEY` on the backend only.
+- `OPENAI_API_KEY` is not needed for deterministic staging.
 - Do not expose server secrets through frontend Vite variables.
 
 ## Vercel Frontend Setup
@@ -40,6 +48,7 @@ Notes:
 - Install command: `npm ci`
 - Build command: `npm run build`
 - Output directory: `dist`
+- `web/vercel.json` now records these frontend build settings in the repository.
 
 Recommended frontend environment variables:
 
