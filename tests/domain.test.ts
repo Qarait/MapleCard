@@ -5,12 +5,15 @@ import { createCanonicalMatcher } from "../src/matchParsedLineToCanonical";
 import { selectBestStore, selectBestStoreWithAlternatives } from "../src/selectBestStore";
 import type { CanonicalCatalogProvider, StoreInventoryProvider } from "../src/services/catalogProvider";
 import { OptimizeServiceError } from "../src/services/optimizeServiceError";
-import { optimizeShopping, DEFAULT_CATALOG_PROVIDERS } from "../src/services/optimizeService";
+import { optimizeShopping, DEFAULT_CATALOG_PROVIDERS, getDefaultCatalogProviders } from "../src/services/optimizeService";
+import { seedCompatibleSyntheticStoreInventoryProvider } from "../src/services/seedInventoryBridge";
+import { seedCanonicalCatalogProvider } from "../src/services/seedCatalogProvider";
 import { syntheticCanonicalCatalogProvider, syntheticStoreInventoryProvider } from "../src/services/syntheticCatalogProvider";
 import { getSyntheticCanonicalItems, getSyntheticStoreProducts } from "../src/services/syntheticCatalogService";
 
 const ORIGINAL_WEIGHTS = { ...DEFAULT_STORE_SCORING_CONFIG.weights };
 const ORIGINAL_SUBSTITUTION_RISK_BLEND = { ...DEFAULT_STORE_SCORING_CONFIG.substitutionRiskBlend };
+const ORIGINAL_ENV = { ...process.env };
 
 afterEach(() => {
   DEFAULT_STORE_SCORING_CONFIG.weights.coverage = ORIGINAL_WEIGHTS.coverage;
@@ -20,6 +23,8 @@ afterEach(() => {
   DEFAULT_STORE_SCORING_CONFIG.weights.substitutionRisk = ORIGINAL_WEIGHTS.substitutionRisk;
   DEFAULT_STORE_SCORING_CONFIG.substitutionRiskBlend.baseRisk = ORIGINAL_SUBSTITUTION_RISK_BLEND.baseRisk;
   DEFAULT_STORE_SCORING_CONFIG.substitutionRiskBlend.attributeMismatchRisk = ORIGINAL_SUBSTITUTION_RISK_BLEND.attributeMismatchRisk;
+  process.env = { ...ORIGINAL_ENV };
+  vi.restoreAllMocks();
 });
 
 describe("domain behavior", () => {
@@ -472,6 +477,44 @@ describe("domain behavior", () => {
 
     canonicalSpy.mockRestore();
     inventorySpy.mockRestore();
+  });
+
+  it("uses synthetic providers when MAPLECARD_CATALOG_SOURCE=synthetic", async () => {
+    process.env.MAPLECARD_CATALOG_SOURCE = "synthetic";
+    const canonicalSpy = vi.spyOn(syntheticCanonicalCatalogProvider, "getCanonicalItems");
+    const inventorySpy = vi.spyOn(syntheticStoreInventoryProvider, "getStoreProducts");
+
+    const result = await optimizeShopping("milk");
+
+    expect(result.items).toHaveLength(1);
+    expect(canonicalSpy).toHaveBeenCalledTimes(1);
+    expect(inventorySpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses the seed provider and bridged inventory when MAPLECARD_CATALOG_SOURCE=seed_bridge", async () => {
+    process.env.MAPLECARD_CATALOG_SOURCE = "seed_bridge";
+    const canonicalSpy = vi.spyOn(seedCanonicalCatalogProvider, "getCanonicalItems");
+    const inventorySpy = vi.spyOn(seedCompatibleSyntheticStoreInventoryProvider, "getStoreProducts");
+
+    const result = await optimizeShopping("milk\neggs\nbanana\nchicken\nrice");
+
+    expect(result.items).toHaveLength(5);
+    expect(canonicalSpy).toHaveBeenCalledTimes(1);
+    expect(inventorySpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to synthetic providers when MAPLECARD_CATALOG_SOURCE is invalid", async () => {
+    process.env.MAPLECARD_CATALOG_SOURCE = "invalid_source";
+    const canonicalSpy = vi.spyOn(syntheticCanonicalCatalogProvider, "getCanonicalItems");
+    const inventorySpy = vi.spyOn(syntheticStoreInventoryProvider, "getStoreProducts");
+
+    const resolvedProviders = getDefaultCatalogProviders();
+    const result = await optimizeShopping("milk");
+
+    expect(resolvedProviders).toBe(DEFAULT_CATALOG_PROVIDERS);
+    expect(result.items).toHaveLength(1);
+    expect(canonicalSpy).toHaveBeenCalledTimes(1);
+    expect(inventorySpy).toHaveBeenCalledTimes(1);
   });
 
   it("optimizeService can run against injected providers instead of raw synthetic service calls", async () => {

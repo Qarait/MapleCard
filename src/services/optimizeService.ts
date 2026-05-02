@@ -4,10 +4,13 @@ import type { CanonicalMatch } from "../matchParsedLineToCanonical";
 import { selectBestStoreWithAlternatives } from "../selectBestStore";
 import type { SelectedStoreResult } from "../selectBestStore";
 import { generateClarificationQuestions } from "../generateClarificationQuestions";
+import { getCatalogSource } from "../config/catalogSourceConfig";
 import { logger } from "../utils/logger";
 import type { CatalogProviders } from "./catalogProvider";
 import { OptimizeServiceError } from "./optimizeServiceError";
 import { validateCanonicalItems, validateStoreProducts } from "./providerValidation";
+import { seedCompatibleSyntheticStoreInventoryProvider } from "./seedInventoryBridge";
+import { seedCanonicalCatalogProvider } from "./seedCatalogProvider";
 import { syntheticCanonicalCatalogProvider, syntheticStoreInventoryProvider } from "./syntheticCatalogProvider";
 
 export type OptimizeResponse = {
@@ -32,6 +35,19 @@ export const DEFAULT_CATALOG_PROVIDERS: CatalogProviders = {
   canonicalCatalogProvider: syntheticCanonicalCatalogProvider,
   storeInventoryProvider: syntheticStoreInventoryProvider,
 };
+
+export function getDefaultCatalogProviders(): CatalogProviders {
+  const catalogSource = getCatalogSource();
+
+  if (catalogSource === "seed_bridge") {
+    return {
+      canonicalCatalogProvider: seedCanonicalCatalogProvider,
+      storeInventoryProvider: seedCompatibleSyntheticStoreInventoryProvider,
+    };
+  }
+
+  return DEFAULT_CATALOG_PROVIDERS;
+}
 
 type ProviderDiagnostics = {
   canonicalItemCount: number;
@@ -117,7 +133,7 @@ async function loadStoreProducts(providers: CatalogProviders, diagnostics: Provi
 
 export async function optimizeShopping(
   rawInput: string,
-  providers: CatalogProviders = DEFAULT_CATALOG_PROVIDERS
+  providers: CatalogProviders = getDefaultCatalogProviders()
 ): Promise<OptimizeResponse> {
   const providerDiagnostics: ProviderDiagnostics = {
     canonicalItemCount: 0,

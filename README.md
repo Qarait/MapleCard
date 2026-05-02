@@ -17,8 +17,19 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 3. Parsing uses deterministic parser rules first, plus an optional OpenAI path for ambiguous meal-intent lines.
 4. `matchParsedLineToCanonical` performs token-based and Jaccard-style matching against canonical items.
 5. `optimizeService` uses `selectBestStoreWithAlternatives` to produce a winning store and alternative store options.
-6. `optimizeService` resolves catalog and inventory data through provider interfaces, which currently use synthetic in-memory providers.
+6. `optimizeService` resolves catalog and inventory data through provider interfaces, with the runtime source selected through `MAPLECARD_CATALOG_SOURCE`.
 7. Clarification questions are generated for low-confidence or user-choice-required cases.
+
+## Runtime Catalog Source Configuration
+
+- `MAPLECARD_CATALOG_SOURCE=synthetic | seed_bridge`
+- Default runtime catalog source: `synthetic`
+- `synthetic` uses the existing synthetic canonical provider plus synthetic store inventory provider.
+- `seed_bridge` is experimental and uses the MapleCard-owned seed canonical provider plus the bridged synthetic inventory provider.
+- Invalid `MAPLECARD_CATALOG_SOURCE` values fall back to `synthetic` and emit an internal warning through the logger.
+- `seed_bridge` only provides runtime inventory coverage for explicitly mapped core items.
+- Real store inventory, pricing, and ETA data remain synthetic in both modes.
+- `seed_bridge` is a stepping stone toward a real catalog-backed runtime path, not production data.
 
 ## Provider Reliability
 
@@ -73,7 +84,8 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 - Store scoring returns both a `winner` and `alternatives`.
 - Missing store ETA values are returned as `null`, not `0`.
 - Stores with missing ETA are penalized during scoring using internal defaulted ETA metadata, but unknown ETA is still surfaced as `null` in the response.
-- The service is currently backed by synthetic in-memory catalog and store data through provider adapters.
+- The default runtime service path is still backed by synthetic in-memory catalog and store data through provider adapters.
+- The optional `seed_bridge` runtime path reuses synthetic store inventory by remapping only mapped core items into seed canonical ids.
 
 ## Catalog and Inventory Provider Contracts
 
@@ -130,6 +142,7 @@ Validation expectations:
 - The seed catalog is being adapted toward runtime use, but the synthetic provider remains the default runtime catalog source until store inventory compatibility is solved.
 - MapleCard now also includes an explicit inventory bridge for mapped core items only, so seed catalog records can be paired with adapted synthetic inventory in compatibility tests.
 - The bridge is limited to mapped legacy synthetic IDs for milk, eggs, bananas, chicken breast, and rice; unmapped seed items still do not have runtime inventory coverage.
+- The bridge can now be selected at runtime through `MAPLECARD_CATALOG_SOURCE=seed_bridge`, but it remains experimental and is not the default.
 - Open Food Facts, USDA, and CNF remain possible future enrichment sources only; they are not the current source of truth.
 - Store price, store inventory, and ETA data are still synthetic today and are not yet backed by real retailer integrations.
 

@@ -25,6 +25,19 @@ describe("optimize API validation", () => {
     expect(response.body).toHaveProperty("clarifications");
   });
 
+  it("keeps the optimize success response shape unchanged in seed_bridge mode", async () => {
+    process.env.MAPLECARD_PARSER_MODE = "deterministic_only";
+    process.env.MAPLECARD_CATALOG_SOURCE = "seed_bridge";
+
+    const response = await request(app)
+      .post("/api/optimize")
+      .send({ rawInput: "milk\neggs\nbanana\nchicken\nrice" });
+
+    expect(response.status).toBe(200);
+    expect(Object.keys(response.body)).toEqual(["items", "winner", "alternatives", "clarifications"]);
+    expect(response.body.items).toHaveLength(5);
+  });
+
   it("rejects a missing rawInput", async () => {
     const response = await request(app).post("/api/optimize").send({});
 
