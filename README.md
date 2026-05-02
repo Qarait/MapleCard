@@ -6,6 +6,7 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 
 - Main endpoint: `POST /api/optimize`
 - Health check: `GET /healthz`
+- Public API contract: [docs/api-contract.md](docs/api-contract.md)
 - Request body: `{ rawInput: string, clarificationAnswers?: Array<{ questionId: string; lineId?: string; rawText: string; attributeKey?: string; value: string }> }`
 - Response body includes `items`, `winner`, `alternatives`, and `clarifications`
 - When clarification answers are submitted, the response may also include `answerResults` describing whether each answer was applied or ignored.
@@ -16,6 +17,15 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 - Clarification answer submission is currently stateless; MapleCard does not persist user sessions or clarification history yet.
 - `answerResults` is intended for frontend or PWA feedback so the UI can explain whether each submitted answer was applied or ignored.
 - `winner.etaMin` and alternative `etaMin` values are `number | null`; `null` means ETA is unknown
+
+## API Contract
+
+- Public endpoint contract: [docs/api-contract.md](docs/api-contract.md)
+- `questionId` is the primary clarification key for answer submission.
+- `lineId` is recommended for duplicate-line targeting.
+- `answerResults` is intended for frontend or PWA feedback after answer submission.
+- Answer submission is stateless.
+- MapleCard does not persist user sessions or user-specific answer history yet.
 
 ## Runtime Flow
 

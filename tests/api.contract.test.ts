@@ -1,0 +1,181 @@
+import request from "supertest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { app } from "../src/app";
+import type { OptimizeResponse } from "../src/services/optimizeService";
+import * as optimizeService from "../src/services/optimizeService";
+import {
+  coffeeWithAnswerFixture,
+  duplicateYogurtLinesFixture,
+  invalidClarificationAnswerFixture,
+  normalGroceryListFixture,
+  rawYogurtRequestFixture,
+  yogurtWithAnswerFixture,
+} from "./fixtures/optimize";
+
+const ORIGINAL_ENV = { ...process.env };
+
+afterEach(() => {
+  process.env = { ...ORIGINAL_ENV };
+  vi.restoreAllMocks();
+});
+
+describe("public API contract", () => {
+  it("GET /healthz returns the documented health payload", async () => {
+    const response = await request(app).get("/healthz");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ ok: true });
+  });
+
+  it("rawInput-only request returns items, winner, alternatives, and clarifications", async () => {
+    process.env.MAPLECARD_PARSER_MODE = "deterministic_only";
+
+    const response = await request(app)
+      .post("/api/optimize")
+      .send(normalGroceryListFixture);
+
+    expect(response.status).toBe(200);
+    expect(Object.keys(response.body)).toEqual(["items", "winner", "alternatives", "clarifications"]);
+    expect(Array.isArray(response.body.items)).toBe(true);
+    expect(Array.isArray(response.body.alternatives)).toBe(true);
+    expect(Array.isArray(response.body.clarifications)).toBe(true);
+    expect(response.body.winner).toEqual(
+      expect.objectContaining({
+        provider: expect.any(String),
+        retailerKey: expect.any(String),
+        subtotal: expect.any(Number),
+        etaMin: expect.any(Number),
+      })
+    );
+  });
+
+  it("clarification objects include stable id and lineId", async () => {
+    process.env.MAPLECARD_PARSER_MODE = "deterministic_only";
+    process.env.MAPLECARD_CATALOG_SOURCE = "seed_bridge";
+
+    const response = await request(app)
+      .post("/api/optimize")
+      .send(rawYogurtRequestFixture);
+
+    expect(response.status).toBe(200);
+    expect(response.body.clarifications.length).toBeGreaterThan(0);
+    for (const clarification of response.body.clarifications) {
+      expect(clarification).toEqual(
+        expect.objectContaining({
+          id: expect.any(String),
+          lineId: expect.any(String),
+          rawText: expect.any(String),
+          question: expect.any(String),
+          options: expect.any(Array),
+        })
+      );
+    }
+  });
+
+  it("answerResults appears when clarificationAnswers are submitted", async () => {
+    process.env.MAPLECARD_PARSER_MODE = "deterministic_only";
+    process.env.MAPLECARD_CATALOG_SOURCE = "seed_bridge";
+
+    const response = await request(app)
+      .post("/api/optimize")
+      .send(yogurtWithAnswerFixture);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("answerResults");
+    expect(Array.isArray(response.body.answerResults)).toBe(true);
+    expect(response.body.answerResults[0]).toEqual(
+      expect.objectContaining({
+        questionId: yogurtWithAnswerFixture.clarificationAnswers[0].questionId,
+        lineId: yogurtWithAnswerFixture.clarificationAnswers[0].lineId,
+        rawText: yogurtWithAnswerFixture.clarificationAnswers[0].rawText,
+        attributeKey: yogurtWithAnswerFixture.clarificationAnswers[0].attributeKey,
+        value: yogurtWithAnswerFixture.clarificationAnswers[0].value,
+        status: expect.any(String),
+        message: expect.any(String),
+      })
+    );
+  });
+
+  it("duplicate-line clarifications have distinct lineIds", async () => {
+    process.env.MAPLECARD_PARSER_MODE = "deterministic_only";
+    process.env.MAPLECARD_CATALOG_SOURCE = "seed_bridge";
+
+    const response = await request(app)
+      .post("/api/optimize")
+      .send(duplicateYogurtLinesFixture);
+
+    expect(response.status).toBe(200);
+
+    const typeQuestions = response.body.clarifications.filter(
+      (clarification: { attributeKey?: string }) => clarification.attributeKey === "type"
+    );
+
+    expect(typeQuestions).toHaveLength(2);
+    expect(typeQuestions[0].lineId).not.toBe(typeQuestions[1].lineId);
+    expect(typeQuestions[0].id).not.toBe(typeQuestions[1].id);
+  });
+
+  it("invalid clarificationAnswers return structured 400", async () => {
+    const response = await request(app)
+      .post("/api/optimize")
+      .send(invalidClarificationAnswerFixture);
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      error: {
+        code: "invalid_clarification_answer",
+        message: "Each clarification answer must include a non-empty `questionId`.",
+        details: { index: 0, field: "questionId" },
+      },
+    });
+  });
+
+  it("supports etaMin as number or null in the public store contract", async () => {
+    process.env.MAPLECARD_PARSER_MODE = "deterministic_only";
+
+    const liveResponse = await request(app)
+      .post("/api/optimize")
+      .send(coffeeWithAnswerFixture);
+
+    expect(liveResponse.status).toBe(200);
+    expect(typeof liveResponse.body.winner.etaMin === "number" || liveResponse.body.winner.etaMin === null).toBe(true);
+    expect(liveResponse.body.alternatives.every((store: { etaMin: number | null }) => typeof store.etaMin === "number" || store.etaMin === null)).toBe(true);
+
+    const mockedResponse: OptimizeResponse = {
+      items: [],
+      winner: {
+        provider: "synthetic",
+        retailerKey: "freshmart",
+        subtotal: 12.34,
+        etaMin: null,
+        coverageRatio: 1,
+        avgMatchConfidence: 1,
+        score: 0.9,
+        reason: "ETA unknown but contract still valid",
+      },
+      alternatives: [
+        {
+          provider: "synthetic",
+          retailerKey: "budgetfoods",
+          subtotal: 13.45,
+          etaMin: 35,
+          coverageRatio: 1,
+          avgMatchConfidence: 1,
+          score: 0.8,
+          reason: "Alternative example",
+        },
+      ],
+      clarifications: [],
+    };
+
+    vi.spyOn(optimizeService, "optimizeShopping").mockResolvedValue(mockedResponse);
+
+    const nullEtaResponse = await request(app)
+      .post("/api/optimize")
+      .send({ rawInput: "milk" });
+
+    expect(nullEtaResponse.status).toBe(200);
+    expect(nullEtaResponse.body.winner.etaMin).toBeNull();
+    expect(nullEtaResponse.body.alternatives[0].etaMin).toBe(35);
+  });
+});
