@@ -12,7 +12,10 @@ import {
 import { getCatalogSource } from "../config/catalogSourceConfig";
 import { logger } from "../utils/logger";
 import { normalizeAttributeRecord } from "../normalizeAttributes";
-import { applyClarificationAnswer } from "../clarifications/clarificationContract";
+import {
+  applyClarificationAnswerWithStatus,
+  type ClarificationAnswerResult,
+} from "../clarifications/clarificationContract";
 import type { CatalogProviders } from "./catalogProvider";
 import { OptimizeServiceError } from "./optimizeServiceError";
 import { validateCanonicalItems, validateStoreProducts } from "./providerValidation";
@@ -36,6 +39,7 @@ export type OptimizeResponse = {
   winner: SelectedStoreResult;
   alternatives: SelectedStoreResult[];
   clarifications: Array<{ id: string; rawText: string; question: string; options: string[]; attributeKey?: string }>;
+  answerResults?: ClarificationAnswerResult[];
 };
 
 export type OptimizeClarificationAnswer = {
@@ -98,29 +102,85 @@ export function applyClarificationAnswersToInputs(
   clarificationInputs: ClarificationInput[],
   parsedLines: ParsedLine[],
   clarificationAnswers: OptimizeClarificationAnswer[]
-): ClarificationInput[] {
+): { updatedInputs: ClarificationInput[]; answerResults: ClarificationAnswerResult[] } {
   const updatedInputs: ClarificationInput[] = clarificationInputs.map((input) => ({
     ...input,
     requestedAttributes: normalizeAttributeRecord(input.requestedAttributes ?? {}),
     resolvedClarificationKeys: [...(input.resolvedClarificationKeys ?? [])],
   }));
+  const answerResults: ClarificationAnswerResult[] = [];
 
   for (const answer of clarificationAnswers) {
-    for (let idx = 0; idx < updatedInputs.length; idx++) {
+    const generatedQuestions = updatedInputs.flatMap((input) => generateInternalClarificationQuestions([input]));
+    const questionById = new Map(generatedQuestions.map((question) => [question.id, question]));
+    const knownQuestion = questionById.get(answer.questionId);
+
+    if (!knownQuestion) {
+      answerResults.push({
+        questionId: answer.questionId,
+        rawText: answer.rawText,
+        ...(answer.attributeKey ? { attributeKey: answer.attributeKey } : {}),
+        value: answer.value,
+        status: "ignored_unknown_question",
+        message: "Answer was ignored because the clarification question was not recognized.",
+      });
+      continue;
+    }
+
+    if (knownQuestion.rawText !== answer.rawText) {
+      answerResults.push({
+        questionId: answer.questionId,
+        rawText: answer.rawText,
+        ...(answer.attributeKey ? { attributeKey: answer.attributeKey } : {}),
+        value: answer.value,
+        status: "ignored_raw_text_mismatch",
+        message: "Answer was ignored because it did not match the requested shopping-list line.",
+      });
+      continue;
+    }
+
+    if (!knownQuestion.attributeKey) {
+      answerResults.push({
+        questionId: answer.questionId,
+        rawText: answer.rawText,
+        ...(answer.attributeKey ? { attributeKey: answer.attributeKey } : {}),
+        value: answer.value,
+        status: "ignored_unsupported_attribute",
+        message: "Answer was ignored because this clarification does not support attribute updates.",
+      });
+      continue;
+    }
+
+    if (answer.attributeKey && answer.attributeKey !== knownQuestion.attributeKey) {
+      answerResults.push({
+        questionId: answer.questionId,
+        rawText: answer.rawText,
+        attributeKey: answer.attributeKey,
+        value: answer.value,
+        status: "ignored_attribute_mismatch",
+        message: "Answer was ignored because it targeted a different attribute than the clarification question.",
+      });
+      continue;
+    }
+
+    const matchingInputIndex = updatedInputs.findIndex((input) => input.rawText === knownQuestion.rawText);
+    if (matchingInputIndex === -1) {
+      answerResults.push({
+        questionId: answer.questionId,
+        rawText: answer.rawText,
+        attributeKey: knownQuestion.attributeKey,
+        value: answer.value,
+        status: "ignored_unknown_question",
+        message: "Answer was ignored because the clarification question was not recognized.",
+      });
+      continue;
+    }
+
+    {
+      const idx = matchingInputIndex;
       const input = updatedInputs[idx];
-      if (input.rawText !== answer.rawText) continue;
-
-      const knownQuestion = generateInternalClarificationQuestions([input]).find(
-        (question) =>
-          question.id === answer.questionId &&
-          question.rawText === answer.rawText &&
-          (answer.attributeKey == null || answer.attributeKey === question.attributeKey)
-      );
-
-      if (!knownQuestion) continue;
-
       const beforeAttributes = normalizeAttributeRecord(input.requestedAttributes ?? {});
-      const updatedTarget = applyClarificationAnswer(
+      const outcome = applyClarificationAnswerWithStatus(
         {
           rawText: input.rawText,
           canonicalItemId: input.canonicalItemId,
@@ -136,9 +196,11 @@ export function applyClarificationAnswersToInputs(
         }
       );
 
-      const afterAttributes = normalizeAttributeRecord(updatedTarget.requestedAttributes ?? {});
-      const answerApplied = didRequestedAttributesChange(beforeAttributes, afterAttributes);
-      if (!answerApplied) break;
+      answerResults.push(outcome.result);
+
+      const afterAttributes = normalizeAttributeRecord(outcome.target.requestedAttributes ?? {});
+      const answerApplied = outcome.result.status === "applied" && didRequestedAttributesChange(beforeAttributes, afterAttributes);
+      if (!answerApplied) continue;
 
       const provisionalInput: ClarificationInput = {
         ...input,
@@ -160,16 +222,14 @@ export function applyClarificationAnswersToInputs(
         ...parsedLines[idx],
         attributes: normalizeAttributeRecord({
           ...(parsedLines[idx].attributes ?? {}),
-          ...(knownQuestion.attributeKey ? { [knownQuestion.attributeKey]: answer.value } : {}),
+          [knownQuestion.attributeKey]: answer.value,
         }),
         needsUserChoice: stillNeedsUserChoice,
       };
-
-      break;
     }
   }
 
-  return updatedInputs;
+  return { updatedInputs, answerResults };
 }
 
 function toCanonicalMatch(input: ClarificationInput): CanonicalMatch {
@@ -262,7 +322,7 @@ export async function optimizeShopping(
   const matchParsedLineToCanonical = createCanonicalMatcher(canonicalItems);
 
   const matches = parsedLines.map((pl) => matchParsedLineToCanonical(pl));
-  const clarificationInputs = applyClarificationAnswersToInputs(
+  const { updatedInputs: clarificationInputs, answerResults } = applyClarificationAnswersToInputs(
     buildClarificationInputs(parsedLines, matches),
     parsedLines,
     clarificationAnswers
@@ -284,6 +344,7 @@ export async function optimizeShopping(
     winner,
     alternatives,
     clarifications,
+    ...(clarificationAnswers.length > 0 ? { answerResults } : {}),
   };
 }
 

@@ -189,7 +189,7 @@ describe("domain behavior", () => {
       },
     ];
 
-    const updatedInputs = applyClarificationAnswersToInputs(
+    const { updatedInputs, answerResults } = applyClarificationAnswersToInputs(
       [
         {
           rawText: "milk",
@@ -216,6 +216,16 @@ describe("domain behavior", () => {
       ]
     );
 
+    expect(answerResults).toEqual([
+      {
+        questionId: "cq_milk__item-1__na__fat__which-milk-fat-level-do-you-want",
+        rawText: "milk",
+        attributeKey: "fat",
+        value: "whole",
+        status: "applied",
+        message: "Answer was applied to the optimization request.",
+      },
+    ]);
     expect(updatedInputs[0].requestedAttributes).toEqual({ fat: "whole" });
     expect(updatedInputs[0].needsUserChoice).toBe(false);
     expect(parsedLines[0].attributes).toEqual({ fat: "whole" });

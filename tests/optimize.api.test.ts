@@ -23,6 +23,7 @@ describe("optimize API validation", () => {
     expect(response.body).toHaveProperty("winner");
     expect(response.body).toHaveProperty("alternatives");
     expect(response.body).toHaveProperty("clarifications");
+    expect(response.body).not.toHaveProperty("answerResults");
   });
 
   it("keeps the optimize success response shape unchanged in seed_bridge mode", async () => {
@@ -211,9 +212,19 @@ describe("optimize API validation", () => {
       });
 
     expect(response.status).toBe(200);
-    expect(Object.keys(response.body)).toEqual(["items", "winner", "alternatives", "clarifications"]);
+    expect(Object.keys(response.body)).toEqual(["items", "winner", "alternatives", "clarifications", "answerResults"]);
     expect(response.body.items[0].attributes.type).toBe("greek");
     expect(response.body.items[0].match.requestedAttributes.type).toBe("greek");
+    expect(response.body.answerResults).toEqual([
+      {
+        questionId: "cq_yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+        rawText: "yogurt",
+        attributeKey: "type",
+        value: "greek",
+        status: "applied",
+        message: "Answer was applied to the optimization request.",
+      },
+    ]);
     expect(response.body.clarifications).toEqual([
       {
         id: "cq_yogurt__seed-dairy-007__yogurt__flavor__which-yogurt-flavor-do-you-want",
@@ -260,6 +271,16 @@ describe("optimize API validation", () => {
     expect(response.status).toBe(200);
     expect(response.body.items[0].attributes.format).toBe("pods");
     expect(response.body.items[0].match.requestedAttributes.format).toBe("pods");
+    expect(response.body.answerResults).toEqual([
+      {
+        questionId: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        rawText: "coffee",
+        attributeKey: "format",
+        value: "pods",
+        status: "applied",
+        message: "Answer was applied to the optimization request.",
+      },
+    ]);
     expect(response.body.clarifications).toEqual([
       {
         id: "cq_coffee__seed-beverages-001__coffee__roast__which-coffee-roast-do-you-want",
@@ -292,6 +313,16 @@ describe("optimize API validation", () => {
     expect(response.status).toBe(200);
     expect(response.body.items[0].attributes.format).toBe("ground");
     expect(response.body.items[0].match.requestedAttributes.format).toBe("ground");
+    expect(response.body.answerResults).toEqual([
+      {
+        questionId: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        rawText: "coffee",
+        attributeKey: "format",
+        value: "capsules",
+        status: "ignored_invalid_option",
+        message: "Answer was ignored because the selected value is not a valid option for this clarification.",
+      },
+    ]);
     expect(response.body.clarifications).toEqual([
       {
         id: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
@@ -331,6 +362,16 @@ describe("optimize API validation", () => {
     expect(response.status).toBe(200);
     expect(response.body.items[0].attributes.type).toBe("regular");
     expect(response.body.items[0].match.requestedAttributes.type).toBe("regular");
+    expect(response.body.answerResults).toEqual([
+      {
+        questionId: "cq_wrong",
+        rawText: "yogurt",
+        attributeKey: "type",
+        value: "greek",
+        status: "ignored_unknown_question",
+        message: "Answer was ignored because the clarification question was not recognized.",
+      },
+    ]);
     expect(response.body.clarifications).toEqual([
       {
         id: "cq_yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
@@ -361,6 +402,70 @@ describe("optimize API validation", () => {
         attributeKey: "size",
       },
     ]);
+  });
+
+  it("returns ignored_raw_text_mismatch when the answer rawText does not match the question", async () => {
+    process.env.MAPLECARD_PARSER_MODE = "deterministic_only";
+    process.env.MAPLECARD_CATALOG_SOURCE = "seed_bridge";
+
+    const response = await request(app)
+      .post("/api/optimize")
+      .send({
+        rawInput: "coffee",
+        clarificationAnswers: [
+          {
+            questionId: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+            rawText: "espresso",
+            attributeKey: "format",
+            value: "pods",
+          },
+        ],
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.answerResults).toEqual([
+      {
+        questionId: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        rawText: "espresso",
+        attributeKey: "format",
+        value: "pods",
+        status: "ignored_raw_text_mismatch",
+        message: "Answer was ignored because it did not match the requested shopping-list line.",
+      },
+    ]);
+    expect(response.body.items[0].attributes.format).toBe("ground");
+  });
+
+  it("returns ignored_attribute_mismatch when the answer attribute does not match the question", async () => {
+    process.env.MAPLECARD_PARSER_MODE = "deterministic_only";
+    process.env.MAPLECARD_CATALOG_SOURCE = "seed_bridge";
+
+    const response = await request(app)
+      .post("/api/optimize")
+      .send({
+        rawInput: "coffee",
+        clarificationAnswers: [
+          {
+            questionId: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+            rawText: "coffee",
+            attributeKey: "roast",
+            value: "pods",
+          },
+        ],
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.answerResults).toEqual([
+      {
+        questionId: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        rawText: "coffee",
+        attributeKey: "roast",
+        value: "pods",
+        status: "ignored_attribute_mismatch",
+        message: "Answer was ignored because it targeted a different attribute than the clarification question.",
+      },
+    ]);
+    expect(response.body.items[0].attributes.format).toBe("ground");
   });
 
   it("rejects a missing rawInput", async () => {

@@ -23,6 +23,23 @@ export type ClarificationAnswerPayload = {
   value: ClarificationAnswerValue;
 };
 
+export type ClarificationAnswerStatus =
+  | "applied"
+  | "ignored_unknown_question"
+  | "ignored_raw_text_mismatch"
+  | "ignored_attribute_mismatch"
+  | "ignored_invalid_option"
+  | "ignored_unsupported_attribute";
+
+export type ClarificationAnswerResult = {
+  questionId: ClarificationQuestionId;
+  rawText: string;
+  attributeKey?: string;
+  value: string;
+  status: ClarificationAnswerStatus;
+  message: string;
+};
+
 export type ClarificationAnswerTarget = {
   rawText: string;
   canonicalItemId?: string;
@@ -42,6 +59,24 @@ function normalizeQuestionIdPart(value: string | undefined): string {
 
 function normalizeAnswerValue(value: ClarificationAnswerValue): string {
   return String(value).trim().toLowerCase();
+}
+
+function buildClarificationAnswerResult(args: {
+  questionId: ClarificationQuestionId;
+  rawText: string;
+  attributeKey?: string;
+  value: ClarificationAnswerValue;
+  status: ClarificationAnswerStatus;
+  message: string;
+}): ClarificationAnswerResult {
+  return {
+    questionId: args.questionId,
+    rawText: args.rawText,
+    ...(args.attributeKey ? { attributeKey: args.attributeKey } : {}),
+    value: String(args.value),
+    status: args.status,
+    message: args.message,
+  };
 }
 
 export function generateClarificationQuestionId(args: {
@@ -103,26 +138,128 @@ export function applyClarificationAnswer(
   question: InternalClarificationQuestion,
   answer: ClarificationAnswerPayload
 ): ClarificationAnswerTarget {
-  if (!question.attributeKey) return target;
-  if (answer.questionId !== question.id) return target;
-  if (answer.rawText !== question.rawText || target.rawText !== question.rawText) return target;
+  return applyClarificationAnswerWithStatus(target, question, answer).target;
+}
 
-  if (answer.attributeKey && answer.attributeKey !== question.attributeKey) return target;
-  if (answer.canonicalItemId && question.canonicalItemId && answer.canonicalItemId !== question.canonicalItemId) return target;
-  if (answer.slug && question.slug && answer.slug !== question.slug) return target;
+export function applyClarificationAnswerWithStatus(
+  target: ClarificationAnswerTarget,
+  question: InternalClarificationQuestion,
+  answer: ClarificationAnswerPayload
+): { target: ClarificationAnswerTarget; result: ClarificationAnswerResult } {
+  if (!question.attributeKey) {
+    return {
+      target,
+      result: buildClarificationAnswerResult({
+        questionId: answer.questionId,
+        rawText: answer.rawText,
+        attributeKey: answer.attributeKey,
+        value: answer.value,
+        status: "ignored_unsupported_attribute",
+        message: "Answer was ignored because this clarification does not support attribute updates.",
+      }),
+    };
+  }
+  if (answer.questionId !== question.id) {
+    return {
+      target,
+      result: buildClarificationAnswerResult({
+        questionId: answer.questionId,
+        rawText: answer.rawText,
+        attributeKey: answer.attributeKey ?? question.attributeKey,
+        value: answer.value,
+        status: "ignored_unknown_question",
+        message: "Answer was ignored because the clarification question was not recognized.",
+      }),
+    };
+  }
+  if (answer.rawText !== question.rawText || target.rawText !== question.rawText) {
+    return {
+      target,
+      result: buildClarificationAnswerResult({
+        questionId: answer.questionId,
+        rawText: answer.rawText,
+        attributeKey: answer.attributeKey ?? question.attributeKey,
+        value: answer.value,
+        status: "ignored_raw_text_mismatch",
+        message: "Answer was ignored because it did not match the requested shopping-list line.",
+      }),
+    };
+  }
+
+  if (answer.attributeKey && answer.attributeKey !== question.attributeKey) {
+    return {
+      target,
+      result: buildClarificationAnswerResult({
+        questionId: answer.questionId,
+        rawText: answer.rawText,
+        attributeKey: answer.attributeKey,
+        value: answer.value,
+        status: "ignored_attribute_mismatch",
+        message: "Answer was ignored because it targeted a different attribute than the clarification question.",
+      }),
+    };
+  }
+  if (answer.canonicalItemId && question.canonicalItemId && answer.canonicalItemId !== question.canonicalItemId) {
+    return {
+      target,
+      result: buildClarificationAnswerResult({
+        questionId: answer.questionId,
+        rawText: answer.rawText,
+        attributeKey: answer.attributeKey ?? question.attributeKey,
+        value: answer.value,
+        status: "ignored_unknown_question",
+        message: "Answer was ignored because the clarification question was not recognized.",
+      }),
+    };
+  }
+  if (answer.slug && question.slug && answer.slug !== question.slug) {
+    return {
+      target,
+      result: buildClarificationAnswerResult({
+        questionId: answer.questionId,
+        rawText: answer.rawText,
+        attributeKey: answer.attributeKey ?? question.attributeKey,
+        value: answer.value,
+        status: "ignored_unknown_question",
+        message: "Answer was ignored because the clarification question was not recognized.",
+      }),
+    };
+  }
 
   const normalizedValue = normalizeAnswerValue(answer.value);
   const optionAllowed = question.options.some((option) => normalizeAnswerValue(option) === normalizedValue);
-  if (!optionAllowed) return target;
+  if (!optionAllowed) {
+    return {
+      target,
+      result: buildClarificationAnswerResult({
+        questionId: answer.questionId,
+        rawText: answer.rawText,
+        attributeKey: answer.attributeKey ?? question.attributeKey,
+        value: answer.value,
+        status: "ignored_invalid_option",
+        message: "Answer was ignored because the selected value is not a valid option for this clarification.",
+      }),
+    };
+  }
 
   return {
-    ...target,
-    canonicalItemId: target.canonicalItemId ?? question.canonicalItemId,
-    slug: target.slug ?? question.slug,
-    requestedAttributes: {
-      ...target.requestedAttributes,
-      [question.attributeKey]: answer.value,
+    target: {
+      ...target,
+      canonicalItemId: target.canonicalItemId ?? question.canonicalItemId,
+      slug: target.slug ?? question.slug,
+      requestedAttributes: {
+        ...target.requestedAttributes,
+        [question.attributeKey]: answer.value,
+      },
+      needsUserChoice: false,
     },
-    needsUserChoice: false,
+    result: buildClarificationAnswerResult({
+      questionId: answer.questionId,
+      rawText: answer.rawText,
+      attributeKey: question.attributeKey,
+      value: answer.value,
+      status: "applied",
+      message: "Answer was applied to the optimization request.",
+    }),
   };
 }
