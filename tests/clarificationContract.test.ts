@@ -151,7 +151,7 @@ describe("clarification contract", () => {
     expect(updated).toEqual(originalTarget);
   });
 
-  it("keeps the public clarification shape unchanged", () => {
+  it("exposes deterministic public clarification ids and stable legacy fields", () => {
     const questions = generateClarificationQuestions([
       {
         rawText: "coffee",
@@ -168,9 +168,61 @@ describe("clarification contract", () => {
     ]);
 
     expect(questions).toEqual([
-      { rawText: "coffee", question: "Which coffee format do you want?", options: ["ground", "whole-bean", "pods"] },
-      { rawText: "coffee", question: "Which coffee roast do you want?", options: ["light", "medium", "dark"] },
+      {
+        id: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        rawText: "coffee",
+        question: "Which coffee format do you want?",
+        options: ["ground", "whole-bean", "pods"],
+        attributeKey: "format",
+      },
+      {
+        id: "cq_coffee__seed-beverages-001__coffee__roast__which-coffee-roast-do-you-want",
+        rawText: "coffee",
+        question: "Which coffee roast do you want?",
+        options: ["light", "medium", "dark"],
+        attributeKey: "roast",
+      },
     ]);
-    expect(Object.keys(questions[0])).toEqual(["rawText", "question", "options"]);
+    expect(Object.keys(questions[0])).toEqual(["id", "rawText", "question", "options", "attributeKey"]);
+  });
+
+  it("builds stable public ids for fallback clarifications", () => {
+    const firstQuestions = generateClarificationQuestions([
+      {
+        rawText: "milk",
+        canonicalItemId: "item-1",
+        resolvedName: "Milk",
+        matchConfidence: 0.5,
+        usedDefault: false,
+        lowConfidence: true,
+        needsClarification: true,
+        clarificationSuggestions: ["fat must be one of: skim, 1%, 2%, whole"],
+        requestedAttributes: {},
+      },
+    ]);
+    const secondQuestions = generateClarificationQuestions([
+      {
+        rawText: "milk",
+        canonicalItemId: "item-1",
+        resolvedName: "Milk",
+        matchConfidence: 0.5,
+        usedDefault: false,
+        lowConfidence: true,
+        needsClarification: true,
+        clarificationSuggestions: ["fat must be one of: skim, 1%, 2%, whole"],
+        requestedAttributes: {},
+      },
+    ]);
+
+    expect(firstQuestions).toEqual(secondQuestions);
+    expect(firstQuestions).toEqual([
+      {
+        id: "cq_milk__item-1__na__fat__which-milk-fat-level-do-you-want",
+        rawText: "milk",
+        question: "Which milk fat level do you want?",
+        options: ["skim", "1%", "2%", "whole"],
+        attributeKey: "fat",
+      },
+    ]);
   });
 });

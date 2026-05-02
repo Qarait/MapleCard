@@ -28,7 +28,7 @@ export type OptimizeResponse = {
   }>;
   winner: SelectedStoreResult;
   alternatives: SelectedStoreResult[];
-  clarifications: Array<{ rawText: string; question: string; options: string[] }>;
+  clarifications: Array<{ id: string; rawText: string; question: string; options: string[]; attributeKey?: string }>;
 };
 
 export const DEFAULT_CATALOG_PROVIDERS: CatalogProviders = {

@@ -8,7 +8,8 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 - Health check: `GET /healthz`
 - Request body: `{ rawInput: string }`
 - Response body includes `items`, `winner`, `alternatives`, and `clarifications`
-- `clarifications` currently remain public question objects only; internal question ids and answer payload handling are not exposed yet.
+- `clarifications` now include a stable `id` for each question while preserving `rawText`, `question`, and `options`.
+- Frontend or PWA clients should treat clarification `id` as the primary key for future answer submission flows.
 - `winner.etaMin` and alternative `etaMin` values are `number | null`; `null` means ETA is unknown
 
 ## Runtime Flow
@@ -85,6 +86,7 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 - Seed catalog clarification templates now influence parser-bridge suggestions for bridge-recognized items.
 - Seed catalog clarification templates now also influence user-facing clarification questions.
 - Sprint 14 adds internal clarification question ids and answer-payload readiness for future frontend or PWA answer flows.
+- Sprint 15 exposes stable clarification ids publicly so frontend clients can safely persist and submit user choices later.
 - This parser bridge is intentionally limited and is not a full schema-driven parser yet.
 - Generic product terms should not be silently over-mapped to a more specific variant when user intent is broader.
 - The OpenAI branch is only used for ambiguous `meal_intent` lines.
@@ -163,6 +165,7 @@ Validation expectations:
 - This is a step toward schema-driven UX rather than the final parser architecture.
 - Future work should move item attributes, aliases, and quantity decisions more fully into the catalog schema over time.
 - Frontend or PWA answer submission is not yet exposed as an API endpoint; Sprint 14 only adds internal readiness for that flow.
+- Public clarification objects still retain `rawText`, `question`, and `options` for backward compatibility even though `id` should now be treated as the primary answer key.
 
 ## CI
 

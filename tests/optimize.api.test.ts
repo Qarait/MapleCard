@@ -38,6 +38,122 @@ describe("optimize API validation", () => {
     expect(response.body.items).toHaveLength(5);
   });
 
+  it("exposes stable public clarification ids while keeping the top-level optimize shape unchanged", async () => {
+    process.env.MAPLECARD_PARSER_MODE = "deterministic_only";
+    process.env.MAPLECARD_CATALOG_SOURCE = "seed_bridge";
+
+    const firstResponse = await request(app)
+      .post("/api/optimize")
+      .send({ rawInput: "yogurt\ncoffee" });
+    const secondResponse = await request(app)
+      .post("/api/optimize")
+      .send({ rawInput: "yogurt\ncoffee" });
+
+    expect(firstResponse.status).toBe(200);
+    expect(secondResponse.status).toBe(200);
+    expect(Object.keys(firstResponse.body)).toEqual(["items", "winner", "alternatives", "clarifications"]);
+    expect(firstResponse.body.clarifications).toEqual(secondResponse.body.clarifications);
+    expect(firstResponse.body.clarifications).toEqual([
+      {
+        id: "cq_yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+        rawText: "yogurt",
+        question: "Which yogurt type do you want?",
+        options: ["regular", "greek", "drinkable"],
+        attributeKey: "type",
+      },
+      {
+        id: "cq_yogurt__seed-dairy-007__yogurt__flavor__which-yogurt-flavor-do-you-want",
+        rawText: "yogurt",
+        question: "Which yogurt flavor do you want?",
+        options: ["plain", "vanilla", "strawberry"],
+        attributeKey: "flavor",
+      },
+      {
+        id: "cq_yogurt__seed-dairy-007__yogurt__fat__which-yogurt-fat-do-you-want",
+        rawText: "yogurt",
+        question: "Which yogurt fat do you want?",
+        options: ["non-fat", "low-fat", "whole"],
+        attributeKey: "fat",
+      },
+      {
+        id: "cq_yogurt__seed-dairy-007__yogurt__size__which-yogurt-size-do-you-want",
+        rawText: "yogurt",
+        question: "Which yogurt size do you want?",
+        options: ["cup", "tub", "multi-pack"],
+        attributeKey: "size",
+      },
+      {
+        id: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        rawText: "coffee",
+        question: "Which coffee format do you want?",
+        options: ["ground", "whole-bean", "pods"],
+        attributeKey: "format",
+      },
+      {
+        id: "cq_coffee__seed-beverages-001__coffee__roast__which-coffee-roast-do-you-want",
+        rawText: "coffee",
+        question: "Which coffee roast do you want?",
+        options: ["light", "medium", "dark"],
+        attributeKey: "roast",
+      },
+    ]);
+  });
+
+  it("exposes yogurt and coffee clarification ids in seed_bridge mode", async () => {
+    process.env.MAPLECARD_PARSER_MODE = "deterministic_only";
+    process.env.MAPLECARD_CATALOG_SOURCE = "seed_bridge";
+
+    const response = await request(app)
+      .post("/api/optimize")
+      .send({ rawInput: "yogurt\ncoffee" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.clarifications).toEqual([
+      {
+        id: "cq_yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+        rawText: "yogurt",
+        question: "Which yogurt type do you want?",
+        options: ["regular", "greek", "drinkable"],
+        attributeKey: "type",
+      },
+      {
+        id: "cq_yogurt__seed-dairy-007__yogurt__flavor__which-yogurt-flavor-do-you-want",
+        rawText: "yogurt",
+        question: "Which yogurt flavor do you want?",
+        options: ["plain", "vanilla", "strawberry"],
+        attributeKey: "flavor",
+      },
+      {
+        id: "cq_yogurt__seed-dairy-007__yogurt__fat__which-yogurt-fat-do-you-want",
+        rawText: "yogurt",
+        question: "Which yogurt fat do you want?",
+        options: ["non-fat", "low-fat", "whole"],
+        attributeKey: "fat",
+      },
+      {
+        id: "cq_yogurt__seed-dairy-007__yogurt__size__which-yogurt-size-do-you-want",
+        rawText: "yogurt",
+        question: "Which yogurt size do you want?",
+        options: ["cup", "tub", "multi-pack"],
+        attributeKey: "size",
+      },
+      {
+        id: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        rawText: "coffee",
+        question: "Which coffee format do you want?",
+        options: ["ground", "whole-bean", "pods"],
+        attributeKey: "format",
+      },
+      {
+        id: "cq_coffee__seed-beverages-001__coffee__roast__which-coffee-roast-do-you-want",
+        rawText: "coffee",
+        question: "Which coffee roast do you want?",
+        options: ["light", "medium", "dark"],
+        attributeKey: "roast",
+      },
+    ]);
+  });
+
   it("rejects a missing rawInput", async () => {
     const response = await request(app).post("/api/optimize").send({});
 

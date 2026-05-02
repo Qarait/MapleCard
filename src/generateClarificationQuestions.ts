@@ -7,9 +7,11 @@ import {
 } from "./clarifications/clarificationContract";
 
 export type ClarificationQuestion = {
+  id: string;
   rawText: string;
   question: string;
   options: string[];
+  attributeKey?: string;
 };
 
 export type ClarificationInput = CanonicalMatch & {
@@ -132,9 +134,11 @@ function determineOptions(input: ClarificationInput): { options: string[]; key?:
 
 function toPublicClarificationQuestion(question: InternalClarificationQuestion): ClarificationQuestion {
   return {
+    id: question.id,
     rawText: question.rawText,
     question: question.question,
     options: question.options,
+    ...(question.attributeKey ? { attributeKey: question.attributeKey } : {}),
   };
 }
 

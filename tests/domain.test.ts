@@ -44,6 +44,8 @@ describe("domain behavior", () => {
     ]);
 
     expect(questions).toHaveLength(1);
+    expect(questions[0].id).toBe("cq_milk__item-1__na__fat__which-milk-fat-level-do-you-want");
+    expect(questions[0].attributeKey).toBe("fat");
     expect(questions[0].question).toBe("Which milk fat level do you want?");
     expect(questions[0].options).toEqual(["skim", "1%", "2%", "whole"]);
   });
@@ -65,10 +67,34 @@ describe("domain behavior", () => {
     ]);
 
     expect(questions).toEqual([
-      { rawText: "yogurt", question: "Which yogurt type do you want?", options: ["regular", "greek", "drinkable"] },
-      { rawText: "yogurt", question: "Which yogurt flavor do you want?", options: ["plain", "vanilla", "strawberry"] },
-      { rawText: "yogurt", question: "Which yogurt fat do you want?", options: ["non-fat", "low-fat", "whole"] },
-      { rawText: "yogurt", question: "Which yogurt size do you want?", options: ["cup", "tub", "multi-pack"] },
+      {
+        id: "cq_yogurt__seed-dairy-007__yogurt__type__which-yogurt-type-do-you-want",
+        rawText: "yogurt",
+        question: "Which yogurt type do you want?",
+        options: ["regular", "greek", "drinkable"],
+        attributeKey: "type",
+      },
+      {
+        id: "cq_yogurt__seed-dairy-007__yogurt__flavor__which-yogurt-flavor-do-you-want",
+        rawText: "yogurt",
+        question: "Which yogurt flavor do you want?",
+        options: ["plain", "vanilla", "strawberry"],
+        attributeKey: "flavor",
+      },
+      {
+        id: "cq_yogurt__seed-dairy-007__yogurt__fat__which-yogurt-fat-do-you-want",
+        rawText: "yogurt",
+        question: "Which yogurt fat do you want?",
+        options: ["non-fat", "low-fat", "whole"],
+        attributeKey: "fat",
+      },
+      {
+        id: "cq_yogurt__seed-dairy-007__yogurt__size__which-yogurt-size-do-you-want",
+        rawText: "yogurt",
+        question: "Which yogurt size do you want?",
+        options: ["cup", "tub", "multi-pack"],
+        attributeKey: "size",
+      },
     ]);
   });
 
@@ -101,9 +127,27 @@ describe("domain behavior", () => {
     ]);
 
     expect(questions).toEqual([
-      { rawText: "greek yogurt", question: "Which greek yogurt flavor do you want?", options: ["plain", "vanilla", "strawberry"] },
-      { rawText: "coffee", question: "Which coffee format do you want?", options: ["ground", "whole-bean", "pods"] },
-      { rawText: "coffee", question: "Which coffee roast do you want?", options: ["light", "medium", "dark"] },
+      {
+        id: "cq_greek-yogurt__seed-dairy-003__greek-yogurt__flavor__which-greek-yogurt-flavor-do-you-want",
+        rawText: "greek yogurt",
+        question: "Which greek yogurt flavor do you want?",
+        options: ["plain", "vanilla", "strawberry"],
+        attributeKey: "flavor",
+      },
+      {
+        id: "cq_coffee__seed-beverages-001__coffee__format__which-coffee-format-do-you-want",
+        rawText: "coffee",
+        question: "Which coffee format do you want?",
+        options: ["ground", "whole-bean", "pods"],
+        attributeKey: "format",
+      },
+      {
+        id: "cq_coffee__seed-beverages-001__coffee__roast__which-coffee-roast-do-you-want",
+        rawText: "coffee",
+        question: "Which coffee roast do you want?",
+        options: ["light", "medium", "dark"],
+        attributeKey: "roast",
+      },
     ]);
   });
 
