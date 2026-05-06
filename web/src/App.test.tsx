@@ -11,6 +11,13 @@ afterEach(() => {
 });
 
 describe("MapleCard mobile web scaffold", () => {
+  it("renders the staging demo banner", () => {
+    render(<App optimizeClient={vi.fn()} />);
+
+    expect(screen.getByText(/maplecard staging demo - uses synthetic inventory and seed catalog data/i)).toBeInTheDocument();
+    expect(screen.getByText(/inventory and pricing are not real yet, checkout is not available/i)).toBeInTheDocument();
+  });
+
   it("renders the raw input screen", () => {
     render(<App optimizeClient={vi.fn()} />);
 

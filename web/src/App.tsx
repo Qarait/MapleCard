@@ -201,9 +201,13 @@ export default function App({ optimizeClient = optimizeShopping }: AppProps) {
     <main className="app-shell">
       <section className="hero-card">
         <p className="eyebrow">MapleCard mobile-first shopping assistant</p>
+        <p className="staging-banner">MapleCard staging demo - uses synthetic inventory and seed catalog data.</p>
         <h1>Build a quick grocery plan that still feels usable on your phone.</h1>
         <p className="hero-copy">
           Fixture mode stays the default for UI work and tests. Backend mode is still available for local smoke testing against MapleCard on port 3000, but the UX here now focuses on a cleaner tap-first shopping flow.
+        </p>
+        <p className="hero-copy staging-copy">
+          Inventory and pricing are not real yet, checkout is not available, and this demo is for validating the shopping-intelligence flow.
         </p>
         <div className="mode-pill-row">
           <span className="mode-pill">Mode: {frontendConfig.apiMode}</span>

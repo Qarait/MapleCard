@@ -47,6 +47,8 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 - Render remains a fallback option if Railway or Vercel is unavailable, but it is not the primary documented path.
 - Staging deployment guidance lives in [docs/staging-deployment.md](docs/staging-deployment.md).
 - Staging observability and request-correlation guidance lives in [docs/staging-observability.md](docs/staging-observability.md).
+- Staging demo walkthrough lives in [docs/staging-demo-script.md](docs/staging-demo-script.md).
+- Staging known limitations live in [docs/staging-known-limitations.md](docs/staging-known-limitations.md).
 - Frontend staging env values are browser-exposed, so they must not contain secrets.
 - `VITE_MAPLECARD_API_BASE_URL` should be the backend origin only, for example `https://your-railway-backend-domain`, with no `/api` suffix.
 - Deployment guidance here is for staging readiness only, not production hardening or production automation.

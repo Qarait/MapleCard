@@ -1,6 +1,7 @@
 import request from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { app, createApp } from "../src/app";
+import { resetOptimizeRateLimitState } from "../src/middleware/rateLimit";
 import type { OptimizeResponse } from "../src/services/optimizeService";
 import * as optimizeService from "../src/services/optimizeService";
 import { OptimizeServiceError } from "../src/services/optimizeServiceError";
@@ -17,10 +18,77 @@ const ORIGINAL_ENV = { ...process.env };
 
 afterEach(() => {
   process.env = { ...ORIGINAL_ENV };
+  resetOptimizeRateLimitState();
   vi.restoreAllMocks();
 });
 
 describe("public API contract", () => {
+  it("rate limiting stays disabled by default so local and test traffic still works", async () => {
+    process.env.MAPLECARD_RATE_LIMIT_ENABLED = "false";
+    process.env.MAPLECARD_RATE_LIMIT_MAX_REQUESTS = "1";
+    process.env.MAPLECARD_RATE_LIMIT_WINDOW_MS = "60000";
+
+    const scopedApp = createApp();
+    const firstResponse = await request(scopedApp).post("/api/optimize").send({ rawInput: "milk" });
+    const secondResponse = await request(scopedApp).post("/api/optimize").send({ rawInput: "milk" });
+
+    expect(firstResponse.status).toBe(200);
+    expect(secondResponse.status).toBe(200);
+  });
+
+  it("rate limiting allows optimize requests under the configured limit", async () => {
+    process.env.MAPLECARD_RATE_LIMIT_ENABLED = "true";
+    process.env.MAPLECARD_RATE_LIMIT_MAX_REQUESTS = "2";
+    process.env.MAPLECARD_RATE_LIMIT_WINDOW_MS = "60000";
+
+    const scopedApp = createApp();
+    const firstResponse = await request(scopedApp).post("/api/optimize").send({ rawInput: "milk" });
+    const secondResponse = await request(scopedApp).post("/api/optimize").send({ rawInput: "eggs" });
+
+    expect(firstResponse.status).toBe(200);
+    expect(secondResponse.status).toBe(200);
+  });
+
+  it("rate limiting returns a structured 429 after the configured limit", async () => {
+    process.env.MAPLECARD_RATE_LIMIT_ENABLED = "true";
+    process.env.MAPLECARD_RATE_LIMIT_MAX_REQUESTS = "1";
+    process.env.MAPLECARD_RATE_LIMIT_WINDOW_MS = "60000";
+
+    const scopedApp = createApp();
+    const firstResponse = await request(scopedApp).post("/api/optimize").send({ rawInput: "milk" });
+    const secondResponse = await request(scopedApp).post("/api/optimize").send({ rawInput: "eggs" });
+
+    expect(firstResponse.status).toBe(200);
+    expect(secondResponse.status).toBe(429);
+    expect(secondResponse.headers["x-request-id"]).toEqual(expect.any(String));
+    expect(secondResponse.headers["x-error-id"]).toMatch(/^err_/);
+    expect(secondResponse.headers["retry-after"]).toEqual(expect.any(String));
+    expect(secondResponse.body.error).toEqual(
+      expect.objectContaining({
+        code: "rate_limited",
+        message: "Too many requests. Please try again shortly.",
+        requestId: secondResponse.headers["x-request-id"],
+        errorId: secondResponse.headers["x-error-id"],
+      })
+    );
+  });
+
+  it("healthz is not affected by optimize rate limiting", async () => {
+    process.env.MAPLECARD_RATE_LIMIT_ENABLED = "true";
+    process.env.MAPLECARD_RATE_LIMIT_MAX_REQUESTS = "1";
+    process.env.MAPLECARD_RATE_LIMIT_WINDOW_MS = "60000";
+
+    const scopedApp = createApp();
+    const optimizeResponse = await request(scopedApp).post("/api/optimize").send({ rawInput: "milk" });
+    const limitedOptimizeResponse = await request(scopedApp).post("/api/optimize").send({ rawInput: "eggs" });
+    const healthResponse = await request(scopedApp).get("/healthz");
+
+    expect(optimizeResponse.status).toBe(200);
+    expect(limitedOptimizeResponse.status).toBe(429);
+    expect(healthResponse.status).toBe(200);
+    expect(healthResponse.body).toEqual(expect.objectContaining({ ok: true }));
+  });
+
   it("GET /healthz remains backward-compatible while exposing release metadata", async () => {
     process.env.NODE_ENV = "production";
     process.env.MAPLECARD_CATALOG_SOURCE = "seed_bridge";
