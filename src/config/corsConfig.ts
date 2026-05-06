@@ -15,12 +15,15 @@ export function getCorsOptions(): CorsOptions | undefined {
   const allowedOrigins = parseAllowedOrigins(process.env.MAPLECARD_CORS_ORIGINS);
 
   if (allowedOrigins.length === 0) {
-    return undefined;
+    return {
+      exposedHeaders: ["X-Request-Id", "X-Error-Id"],
+    };
   }
 
   const allowedOriginSet = new Set(allowedOrigins);
 
   return {
+    exposedHeaders: ["X-Request-Id", "X-Error-Id"],
     origin(origin, callback) {
       if (origin === undefined || allowedOriginSet.has(origin)) {
         callback(null, true);

@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
+import { createErrorId, getRequestContext } from "../middleware/requestContext";
 import { OptimizeServiceError } from "../services/optimizeServiceError";
 import { optimizeShopping, type OptimizeClarificationAnswer } from "../services/optimizeService";
+import { logger } from "../utils/logger";
 
 type ValidationError = {
   code:
@@ -176,30 +178,82 @@ function validateOptimizeRequest(body: any): { error: ValidationError | null; va
 }
 
 export async function optimizeController(req: Request, res: Response) {
+  const requestPath = req.originalUrl;
+
   try {
+    const { requestId } = getRequestContext(res);
     const validation = validateOptimizeRequest(req.body);
     if (validation.error) {
-      res.status(400).json({ error: validation.error });
+      const errorId = createErrorId();
+
+      res.setHeader("X-Error-Id", errorId);
+      logger.warn("[MapleCard optimize] Validation rejected request.", {
+        requestId,
+        errorId,
+        errorCode: validation.error.code,
+        statusCode: 400,
+        path: requestPath,
+        method: req.method,
+      });
+
+      res.status(400).json({
+        error: {
+          ...validation.error,
+          requestId,
+          errorId,
+        },
+      });
       return;
     }
 
     const result = await optimizeShopping(validation.value!.rawInput, undefined, validation.value!.clarificationAnswers);
     res.json(result);
   } catch (err: any) {
+    const { requestId } = getRequestContext(res);
+
     if (err instanceof OptimizeServiceError) {
+      const errorId = createErrorId();
+
+      res.setHeader("X-Error-Id", errorId);
+      logger.error("[MapleCard optimize] Controlled optimize failure.", {
+        requestId,
+        errorId,
+        errorCode: err.code,
+        statusCode: err.statusCode,
+        path: requestPath,
+        method: req.method,
+      });
+
       res.status(err.statusCode).json({
         error: {
           code: err.code,
           message: err.message,
+          requestId,
+          errorId,
         },
       });
       return;
     }
 
+    const errorId = createErrorId();
+
+    res.setHeader("X-Error-Id", errorId);
+    logger.error("[MapleCard optimize] Unhandled optimize failure.", {
+      requestId,
+      errorId,
+      errorCode: "optimization_failed",
+      statusCode: 500,
+      path: requestPath,
+      method: req.method,
+      errorName: err instanceof Error ? err.name : typeof err,
+    });
+
     res.status(500).json({
       error: {
         code: "optimization_failed",
         message: "Optimization failed.",
+        requestId,
+        errorId,
       },
     });
   }

@@ -284,7 +284,7 @@ async function loadCanonicalItems(providers: CatalogProviders, diagnostics: Prov
   } catch (error: any) {
     diagnostics.providerFailureReason = "canonical_catalog_provider_rejected";
     logProviderWarning("Canonical catalog provider failed.", diagnostics, {
-      reason: String(error?.message ?? error),
+      providerErrorType: error instanceof Error ? error.name : typeof error,
     });
     throw new OptimizeServiceError("catalog_provider_failed", "Catalog provider is currently unavailable.", 503);
   }
@@ -318,7 +318,7 @@ async function loadStoreProducts(providers: CatalogProviders, diagnostics: Provi
   } catch (error: any) {
     diagnostics.providerFailureReason = "store_inventory_provider_rejected";
     logProviderWarning("Store inventory provider failed.", diagnostics, {
-      reason: String(error?.message ?? error),
+      providerErrorType: error instanceof Error ? error.name : typeof error,
     });
     throw new OptimizeServiceError("inventory_provider_failed", "Store inventory provider is currently unavailable.", 503);
   }

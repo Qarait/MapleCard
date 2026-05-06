@@ -10,6 +10,17 @@ export type FrontendConfig = {
 
 export type OptimizeShoppingClient = (request: OptimizeRequest) => Promise<OptimizeResponse>;
 
+export class ApiClientError extends Error {
+  constructor(
+    message: string,
+    public readonly requestId?: string,
+    public readonly errorId?: string
+  ) {
+    super(message);
+    this.name = "ApiClientError";
+  }
+}
+
 const VALIDATION_ERROR_CODES = new Set([
   "missing_raw_input",
   "invalid_raw_input_type",
@@ -40,7 +51,11 @@ async function parseApiError(response: Response): Promise<Error> {
   }
 
   const safeMessage = getSafeApiErrorMessage(response.status, errorBody?.error?.code);
-  return new Error(safeMessage);
+  return new ApiClientError(
+    safeMessage,
+    errorBody?.error?.requestId ?? response.headers.get("x-request-id") ?? undefined,
+    errorBody?.error?.errorId ?? response.headers.get("x-error-id") ?? undefined
+  );
 }
 
 function normalizeApiBaseUrl(apiBaseUrl: string): string {
@@ -79,7 +94,7 @@ export function createOptimizeShoppingClient(config: FrontendConfig = frontendCo
         body: JSON.stringify(request),
       });
     } catch {
-      throw new Error("MapleCard could not reach the local backend. Confirm the API server is running, then try again.");
+      throw new ApiClientError("MapleCard could not reach the local backend. Confirm the API server is running, then try again.");
     }
 
     if (!response.ok) {

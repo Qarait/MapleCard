@@ -46,6 +46,7 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 - Recommended MVP staging path: Vercel for the frontend from `web/`, Railway for the backend from the repository root.
 - Render remains a fallback option if Railway or Vercel is unavailable, but it is not the primary documented path.
 - Staging deployment guidance lives in [docs/staging-deployment.md](docs/staging-deployment.md).
+- Staging observability and request-correlation guidance lives in [docs/staging-observability.md](docs/staging-observability.md).
 - Frontend staging env values are browser-exposed, so they must not contain secrets.
 - `VITE_MAPLECARD_API_BASE_URL` should be the backend origin only, for example `https://your-railway-backend-domain`, with no `/api` suffix.
 - Deployment guidance here is for staging readiness only, not production hardening or production automation.
@@ -228,7 +229,7 @@ Validation expectations:
 - Scoring weights are versioned in code, but they are still code-configured rather than externally managed.
 - Attribute normalization aliases are conservative and code-managed today; a real production schema should eventually be DB-driven.
 - Input validation is still limited to request-shape and size constraints; it does not validate semantic item quality beyond those bounds.
-- Observability is still minimal: warnings now flow through a logger abstraction, but there is still no structured logging backend, metrics, or tracing.
+- Staging observability now includes structured request/error correlation logs and frontend reference IDs, but there is still no external log aggregation, metrics backend, or tracing system.
 - Attribute schema drift is reduced by conservative key alias normalization, but value semantics and broader schema evolution still need stronger governance.
 - Missing ETA handling is safer now, but ETA defaulting and penalty metadata remain internal-only and are not yet surfaced for debugging or analytics.
 

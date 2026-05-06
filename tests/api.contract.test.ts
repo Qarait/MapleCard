@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { app, createApp } from "../src/app";
 import type { OptimizeResponse } from "../src/services/optimizeService";
 import * as optimizeService from "../src/services/optimizeService";
+import { OptimizeServiceError } from "../src/services/optimizeServiceError";
 import {
   coffeeWithAnswerFixture,
   duplicateYogurtLinesFixture,
@@ -37,6 +38,36 @@ describe("public API contract", () => {
         parserMode: "deterministic_only",
       })
     );
+    expect(response.headers["x-request-id"]).toEqual(expect.any(String));
+  });
+
+  it("preserves a safe incoming X-Request-Id header", async () => {
+    const response = await request(createApp())
+      .get("/healthz")
+      .set("X-Request-Id", "client-request-123");
+
+    expect(response.status).toBe(200);
+    expect(response.headers["x-request-id"]).toBe("client-request-123");
+  });
+
+  it("generates X-Request-Id when the client does not send one", async () => {
+    const response = await request(createApp()).get("/healthz");
+
+    expect(response.status).toBe(200);
+    expect(response.headers["x-request-id"]).toEqual(expect.any(String));
+    expect(response.headers["x-request-id"].length).toBeGreaterThan(0);
+  });
+
+  it("GET /healthz and /healthz/ stay consistent", async () => {
+    process.env.NODE_ENV = "production";
+
+    const scopedApp = createApp();
+    const healthzResponse = await request(scopedApp).get("/healthz");
+    const trailingSlashResponse = await request(scopedApp).get("/healthz/");
+
+    expect(healthzResponse.status).toBe(200);
+    expect(trailingSlashResponse.status).toBe(200);
+    expect(trailingSlashResponse.body).toEqual(healthzResponse.body);
   });
 
   it("GET /healthz does not expose secrets in release metadata", async () => {
@@ -68,6 +99,7 @@ describe("public API contract", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers["access-control-allow-origin"]).toBe("https://maple-card.vercel.app");
+    expect(response.headers["access-control-expose-headers"]).toContain("X-Request-Id");
   });
 
   it("CORS allowlist omits CORS headers for unknown origins", async () => {
@@ -90,6 +122,71 @@ describe("public API contract", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers["access-control-allow-origin"]).toBe("*");
+    expect(response.headers["access-control-expose-headers"]).toContain("X-Request-Id");
+    expect(response.headers["access-control-expose-headers"]).toContain("X-Error-Id");
+  });
+
+  it("invalid optimize requests return safe request and error correlation ids", async () => {
+    const response = await request(createApp())
+      .post("/api/optimize")
+      .send({ rawInput: "milk", clarificationAnswers: [{ questionId: "", rawText: "milk", value: "whole" }] });
+
+    expect(response.status).toBe(400);
+    expect(response.headers["x-request-id"]).toEqual(expect.any(String));
+    expect(response.headers["x-error-id"]).toMatch(/^err_/);
+    expect(response.body.error).toEqual(
+      expect.objectContaining({
+        code: "invalid_clarification_answer",
+        requestId: response.headers["x-request-id"],
+        errorId: response.headers["x-error-id"],
+      })
+    );
+  });
+
+  it("controlled optimize errors return safe correlation ids", async () => {
+    vi.spyOn(optimizeService, "optimizeShopping").mockRejectedValue(
+      new OptimizeServiceError("catalog_provider_failed", "Catalog temporarily unavailable.", 503)
+    );
+
+    const response = await request(createApp())
+      .post("/api/optimize")
+      .send({ rawInput: "milk" });
+
+    expect(response.status).toBe(503);
+    expect(response.headers["x-request-id"]).toEqual(expect.any(String));
+    expect(response.headers["x-error-id"]).toMatch(/^err_/);
+    expect(response.body.error).toEqual(
+      expect.objectContaining({
+        code: "catalog_provider_failed",
+        requestId: response.headers["x-request-id"],
+        errorId: response.headers["x-error-id"],
+      })
+    );
+  });
+
+  it("unexpected server errors are sanitized and include requestId and errorId", async () => {
+    vi.spyOn(optimizeService, "optimizeShopping").mockRejectedValue(
+      new Error("OPENAI_API_KEY leaked at C:\\secret\\config.txt")
+    );
+
+    const response = await request(createApp())
+      .post("/api/optimize")
+      .send({ rawInput: "milk" });
+
+    expect(response.status).toBe(500);
+    expect(response.headers["x-request-id"]).toEqual(expect.any(String));
+    expect(response.headers["x-error-id"]).toMatch(/^err_/);
+    expect(response.body.error).toEqual(
+      expect.objectContaining({
+        code: "optimization_failed",
+        message: "Optimization failed.",
+        requestId: response.headers["x-request-id"],
+        errorId: response.headers["x-error-id"],
+      })
+    );
+    expect(JSON.stringify(response.body)).not.toContain("OPENAI_API_KEY");
+    expect(JSON.stringify(response.body)).not.toContain("secret");
+    expect(JSON.stringify(response.body)).not.toContain("config.txt");
   });
 
   it("rawInput-only request returns items, winner, alternatives, and clarifications", async () => {
@@ -100,6 +197,7 @@ describe("public API contract", () => {
       .send(normalGroceryListFixture);
 
     expect(response.status).toBe(200);
+    expect(response.headers["x-request-id"]).toEqual(expect.any(String));
     expect(Object.keys(response.body)).toEqual(["items", "winner", "alternatives", "clarifications"]);
     expect(Array.isArray(response.body.items)).toBe(true);
     expect(Array.isArray(response.body.alternatives)).toBe(true);
@@ -187,11 +285,11 @@ describe("public API contract", () => {
 
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
-      error: {
+      error: expect.objectContaining({
         code: "invalid_clarification_answer",
         message: "Each clarification answer must include a non-empty `questionId`.",
         details: { index: 0, field: "questionId" },
-      },
+      }),
     });
   });
 

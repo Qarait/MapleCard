@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createOptimizeShoppingClient } from "./optimizeClient";
+import { ApiClientError, createOptimizeShoppingClient } from "./optimizeClient";
 
 function createBackendSuccessResponse() {
   return {
     ok: true,
+    headers: new Headers(),
     json: async () => ({
       items: [],
       winner: {
@@ -166,5 +167,40 @@ describe("optimize client", () => {
       alternatives: [],
       clarifications: [],
     });
+  });
+
+  it("backend mode surfaces safe correlation ids from error responses", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      headers: new Headers({
+        "x-request-id": "req_123",
+        "x-error-id": "err_123",
+      }),
+      json: async () => ({
+        error: {
+          code: "catalog_provider_failed",
+          message: "Catalog temporarily unavailable.",
+          requestId: "req_123",
+          errorId: "err_123",
+        },
+      }),
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createOptimizeShoppingClient({
+      apiMode: "backend",
+      apiBaseUrl: "https://backend.example.com",
+    });
+
+    await expect(client({ rawInput: "milk" })).rejects.toEqual(
+      expect.objectContaining<ApiClientError>({
+        name: "ApiClientError",
+        message: "MapleCard could not complete this request right now. Please try again in a moment.",
+        requestId: "req_123",
+        errorId: "err_123",
+      })
+    );
   });
 });

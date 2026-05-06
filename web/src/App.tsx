@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { optimizeShopping, type OptimizeShoppingClient, frontendConfig } from "./api/optimizeClient";
+import { ApiClientError, optimizeShopping, type OptimizeShoppingClient, frontendConfig } from "./api/optimizeClient";
 import type { AnswerResult, ClarificationAnswer, ClarificationQuestion, OptimizeRequest, OptimizeResponse } from "./types/api";
 
 type AppProps = {
@@ -12,6 +12,12 @@ type ClarificationGroupView = {
   questions: ClarificationQuestion[];
   duplicateIndex: number;
   duplicateCount: number;
+};
+
+type ErrorDisplayState = {
+  message: string;
+  requestId?: string;
+  errorId?: string;
 };
 
 function formatCurrency(amount: number): string {
@@ -116,7 +122,7 @@ export default function App({ optimizeClient = optimizeShopping }: AppProps) {
   const [response, setResponse] = useState<OptimizeResponse | null>(null);
   const [clarificationAnswers, setClarificationAnswers] = useState<ClarificationAnswer[]>([]);
   const [lastRequest, setLastRequest] = useState<OptimizeRequest | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorState, setErrorState] = useState<ErrorDisplayState | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const hasInput = rawInput.trim().length > 0;
 
@@ -140,7 +146,7 @@ export default function App({ optimizeClient = optimizeShopping }: AppProps) {
 
   async function submitRequest(nextRequest: OptimizeRequest, nextSubmittedInput: string) {
     setIsLoading(true);
-    setErrorMessage(null);
+    setErrorState(null);
     setLastRequest(nextRequest);
 
     try {
@@ -149,7 +155,15 @@ export default function App({ optimizeClient = optimizeShopping }: AppProps) {
       setSubmittedRawInput(nextSubmittedInput);
     } catch (error) {
       const message = error instanceof Error ? error.message : "MapleCard could not complete this request right now. Please try again in a moment.";
-      setErrorMessage(message);
+      setErrorState(
+        error instanceof ApiClientError
+          ? {
+              message,
+              requestId: error.requestId,
+              errorId: error.errorId,
+            }
+          : { message }
+      );
     } finally {
       setIsLoading(false);
     }
@@ -232,7 +246,18 @@ export default function App({ optimizeClient = optimizeShopping }: AppProps) {
             <p>Add a short list like yogurt, coffee, or a few weekly staples to see stores, clarifications, and answer feedback.</p>
           </div>
         ) : null}
-        {errorMessage ? <p className="error-banner" role="alert">{errorMessage}</p> : null}
+        {errorState ? (
+          <div className="error-banner" role="alert">
+            <p>{errorState.message}</p>
+            {errorState.requestId || errorState.errorId ? (
+              <p className="error-correlation">
+                {errorState.requestId ? `Request ID: ${errorState.requestId}` : ""}
+                {errorState.requestId && errorState.errorId ? " · " : ""}
+                {errorState.errorId ? `Error ID: ${errorState.errorId}` : ""}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </section>
 
       {isLoading ? (

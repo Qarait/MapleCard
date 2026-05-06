@@ -46,10 +46,10 @@ describe("optimize API validation", () => {
 
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
-      error: {
+      error: expect.objectContaining({
         code: "invalid_clarification_answers_type",
         message: "`clarificationAnswers` must be an array when provided.",
-      },
+      }),
     });
   });
 
@@ -69,11 +69,11 @@ describe("optimize API validation", () => {
 
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
-      error: {
+      error: expect.objectContaining({
         code: "invalid_clarification_answer",
         message: "Each clarification answer must include a non-empty `questionId`.",
         details: { index: 0, field: "questionId" },
-      },
+      }),
     });
   });
 
@@ -656,10 +656,10 @@ describe("optimize API validation", () => {
 
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
-      error: {
+      error: expect.objectContaining({
         code: "missing_raw_input",
         message: "Request body must include `rawInput`.",
-      },
+      }),
     });
   });
 
@@ -695,10 +695,10 @@ describe("optimize API validation", () => {
 
     expect(response.status).toBe(503);
     expect(response.body).toEqual({
-      error: {
+      error: expect.objectContaining({
         code: "catalog_provider_failed",
         message: "Catalog provider is currently unavailable.",
-      },
+      }),
     });
 
     optimizeShoppingSpy.mockRestore();

@@ -3,7 +3,7 @@ import { DEFAULT_STORE_SCORING_CONFIG } from "../src/config/storeScoringConfig";
 import { generateClarificationQuestions } from "../src/generateClarificationQuestions";
 import { createCanonicalMatcher } from "../src/matchParsedLineToCanonical";
 import { selectBestStore, selectBestStoreWithAlternatives } from "../src/selectBestStore";
-import type { CanonicalCatalogProvider, StoreInventoryProvider } from "../src/services/catalogProvider";
+import type { CanonicalCatalogProvider, CatalogProviders, StoreInventoryProvider } from "../src/services/catalogProvider";
 import { OptimizeServiceError } from "../src/services/optimizeServiceError";
 import {
   applyClarificationAnswersToInputs,
@@ -185,6 +185,29 @@ describe("domain behavior", () => {
     ]);
 
     expect(questions).toEqual([]);
+  });
+
+  it("does not log provider secret strings when a catalog provider throws", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const providers: CatalogProviders = {
+      canonicalCatalogProvider: {
+        async getCanonicalItems() {
+          throw new Error("catalog secret");
+        },
+      },
+      storeInventoryProvider: syntheticStoreInventoryProvider,
+    };
+
+    await expect(optimizeShopping("milk", providers)).rejects.toMatchObject({
+      code: "catalog_provider_failed",
+      statusCode: 503,
+    });
+
+    const serializedLogs = warnSpy.mock.calls.map((call) => call.join(" ")).join("\n");
+
+    expect(serializedLogs).toContain("Canonical catalog provider failed.");
+    expect(serializedLogs).not.toContain("catalog secret");
   });
 
   it("applies a safe fallback clarification answer and removes the answered question", () => {

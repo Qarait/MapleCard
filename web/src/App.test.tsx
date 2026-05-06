@@ -173,10 +173,16 @@ describe("MapleCard mobile web scaffold", () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
       status: 400,
+      headers: new Headers({
+        "x-request-id": "req_validation_123",
+        "x-error-id": "err_validation_123",
+      }),
       json: async () => ({
         error: {
           code: "invalid_clarification_answer",
           message: "Each clarification answer must include a non-empty `questionId`.",
+          requestId: "req_validation_123",
+          errorId: "err_validation_123",
         },
       }),
     });
@@ -197,6 +203,8 @@ describe("MapleCard mobile web scaffold", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       /please check your shopping list and clarification answers, then try again/i
     );
+    expect(screen.getByRole("alert")).toHaveTextContent(/request id: req_validation_123/i);
+    expect(screen.getByRole("alert")).toHaveTextContent(/error id: err_validation_123/i);
   });
 
   it("renders a safe network failure message from backend mode", async () => {
