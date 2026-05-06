@@ -2,6 +2,11 @@
 
 This guide prepares MapleCard for MVP staging deployment without changing backend runtime behavior or adding deployment automation from code.
 
+Live staging endpoints:
+
+- Railway backend: `https://maplecard-production.up.railway.app`
+- Vercel frontend: `https://maple-card.vercel.app`
+
 Config files now reduce dashboard copy-paste errors:
 
 - `railway.json` codifies the backend build command, start command, health check path, and restart policy.
@@ -23,6 +28,7 @@ Recommended backend environment variables:
 NODE_ENV=production
 MAPLECARD_PARSER_MODE=deterministic_only
 MAPLECARD_CATALOG_SOURCE=seed_bridge
+MAPLECARD_CORS_ORIGINS=https://maple-card.vercel.app
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_TIMEOUT_MS=5000
 OPENAI_MAX_BATCH_ITEMS=20
@@ -54,7 +60,7 @@ Recommended frontend environment variables:
 
 ```env
 VITE_MAPLECARD_API_MODE=backend
-VITE_MAPLECARD_API_BASE_URL=https://your-railway-backend-domain
+VITE_MAPLECARD_API_BASE_URL=https://maplecard-production.up.railway.app
 ```
 
 Warnings:
@@ -66,8 +72,13 @@ Warnings:
 
 ## CORS Notes
 
-- The backend currently uses permissive `cors()` behavior, which is acceptable for staging.
-- Future production deployment should restrict allowed origins explicitly.
+- If `MAPLECARD_CORS_ORIGINS` is unset, the backend keeps permissive `cors()` behavior for local and development compatibility.
+- If `MAPLECARD_CORS_ORIGINS` is set, the backend only reflects configured comma-separated origins and safely omits CORS headers for unknown origins.
+- Recommended Railway staging value:
+
+```env
+MAPLECARD_CORS_ORIGINS=https://maple-card.vercel.app
+```
 
 ## Smoke Test
 

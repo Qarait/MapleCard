@@ -1,6 +1,6 @@
 import request from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { app } from "../src/app";
+import { app, createApp } from "../src/app";
 import type { OptimizeResponse } from "../src/services/optimizeService";
 import * as optimizeService from "../src/services/optimizeService";
 import {
@@ -20,11 +20,76 @@ afterEach(() => {
 });
 
 describe("public API contract", () => {
-  it("GET /healthz returns the documented health payload", async () => {
+  it("GET /healthz remains backward-compatible while exposing release metadata", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.MAPLECARD_CATALOG_SOURCE = "seed_bridge";
+    process.env.MAPLECARD_PARSER_MODE = "deterministic_only";
+
     const response = await request(app).get("/healthz");
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ ok: true });
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        ok: true,
+        service: "maplecard-api",
+        environment: "production",
+        catalogSource: "seed_bridge",
+        parserMode: "deterministic_only",
+      })
+    );
+  });
+
+  it("GET /healthz does not expose secrets in release metadata", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.MAPLECARD_PARSER_MODE = "llm_assisted";
+    process.env.OPENAI_API_KEY = "super-secret-key";
+    process.env.MAPLECARD_CORS_ORIGINS = "https://maple-card.vercel.app";
+
+    const response = await request(createApp()).get("/healthz");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        ok: true,
+        parserMode: "llm_assisted",
+      })
+    );
+    expect(response.body).not.toHaveProperty("OPENAI_API_KEY");
+    expect(JSON.stringify(response.body)).not.toContain("super-secret-key");
+    expect(JSON.stringify(response.body)).not.toContain("https://maple-card.vercel.app");
+  });
+
+  it("CORS allowlist allows a configured origin", async () => {
+    process.env.MAPLECARD_CORS_ORIGINS = "https://maple-card.vercel.app";
+
+    const response = await request(createApp())
+      .get("/healthz")
+      .set("Origin", "https://maple-card.vercel.app");
+
+    expect(response.status).toBe(200);
+    expect(response.headers["access-control-allow-origin"]).toBe("https://maple-card.vercel.app");
+  });
+
+  it("CORS allowlist omits CORS headers for unknown origins", async () => {
+    process.env.MAPLECARD_CORS_ORIGINS = "https://maple-card.vercel.app";
+
+    const response = await request(createApp())
+      .get("/healthz")
+      .set("Origin", "https://unknown.example.com");
+
+    expect(response.status).toBe(200);
+    expect(response.headers["access-control-allow-origin"]).toBeUndefined();
+  });
+
+  it("CORS stays permissive when no allowlist is configured", async () => {
+    delete process.env.MAPLECARD_CORS_ORIGINS;
+
+    const response = await request(createApp())
+      .get("/healthz")
+      .set("Origin", "http://localhost:5173");
+
+    expect(response.status).toBe(200);
+    expect(response.headers["access-control-allow-origin"]).toBe("*");
   });
 
   it("rawInput-only request returns items, winner, alternatives, and clarifications", async () => {
