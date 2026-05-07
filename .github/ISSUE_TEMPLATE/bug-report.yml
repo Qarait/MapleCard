@@ -1,0 +1,66 @@
+name: Bug report
+description: Report a MapleCard bug with reproduction details and correlation IDs when available.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Where did this happen?
+      placeholder: staging-demo / local backend / local fixture mode
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: Reproduction steps
+      description: List the smallest repeatable path.
+      placeholder: |
+        1. Open the staging frontend
+        2. Submit yogurt
+        3. Select greek
+        4. Observe the issue
+    validations:
+      required: true
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: input
+    id: request-error-ids
+    attributes:
+      label: Request ID / Error ID
+      description: Include any correlation IDs if available.
+      placeholder: requestId=... ; errorId=...
+  - type: input
+    id: browser-device
+    attributes:
+      label: Browser / device
+      placeholder: Chrome on macOS, Safari on iPhone, etc.
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - P0 demo blocker
+        - P1 broken core flow
+        - P2 confusing UX
+        - P3 catalog or wording improvement
+        - P4 future enhancement
+    validations:
+      required: true
+  - type: textarea
+    id: logs-screenshots
+    attributes:
+      label: Logs or screenshots
+      description: Paste any safe logs, copied feedback report excerpts, or screenshots if available.

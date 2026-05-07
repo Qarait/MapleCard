@@ -1,0 +1,84 @@
+name: Demo feedback
+description: Capture structured MapleCard staging demo feedback from a copied report.
+title: "[Demo Feedback]: "
+labels:
+  - demo-feedback
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Short description of the issue, confusion, or observation.
+      placeholder: The duplicate yogurt flow looked correct until the second answer, then the UI became confusing.
+    validations:
+      required: true
+  - type: input
+    id: staging-url
+    attributes:
+      label: Staging URL
+      description: Which MapleCard staging URL was used?
+      placeholder: https://maple-card.vercel.app
+    validations:
+      required: true
+  - type: textarea
+    id: copied-feedback-report
+    attributes:
+      label: Copied feedback report
+      description: Paste the full feedback report copied from the MapleCard demo feedback panel.
+      render: json
+    validations:
+      required: true
+  - type: input
+    id: request-id
+    attributes:
+      label: Request ID
+      description: Include if the report or UI exposed one.
+      placeholder: req_123 or UUID
+  - type: input
+    id: error-id
+    attributes:
+      label: Error ID
+      description: Include if the report or UI exposed one.
+      placeholder: err_123 or err_UUID
+  - type: dropdown
+    id: flow-tested
+    attributes:
+      label: Flow tested
+      options:
+        - yogurt
+        - coffee
+        - duplicate yogurt lines
+        - empty input
+        - invalid clarification flow
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: expected-result
+    attributes:
+      label: Expected result
+      placeholder: I expected the clarification flow to stay attached to the same list line.
+    validations:
+      required: true
+  - type: textarea
+    id: actual-result
+    attributes:
+      label: Actual result
+      placeholder: The UI showed a different answer state than I expected.
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots-notes
+    attributes:
+      label: Screenshots or notes
+      description: Optional screenshots, device notes, or any extra context.
+  - type: dropdown
+    id: raw-input-intentional
+    attributes:
+      label: Was raw input included intentionally?
+      options:
+        - no
+        - yes
+        - not sure
+    validations:
+      required: true

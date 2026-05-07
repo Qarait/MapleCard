@@ -30,6 +30,7 @@ describe("MapleCard mobile web scaffold", () => {
     expect(screen.getByRole("button", { name: /optimize shopping list/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /copy feedback report/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/include my shopping-list text in this report/i)).not.toBeChecked();
+    expect(screen.getByText(/paste this report into a maplecard demo feedback issue/i)).toBeInTheDocument();
   });
 
   it("copies a privacy-safe feedback report by default", async () => {

@@ -306,6 +306,7 @@ export default function App({ optimizeClient = optimizeShopping }: AppProps) {
           <div>
             <p className="card-label">Demo feedback</p>
             <p className="muted-copy">This copies a report you can paste into a message. It is not sent automatically.</p>
+            <p className="muted-copy">Paste this report into a MapleCard demo feedback issue.</p>
           </div>
           <label className="feedback-checkbox">
             <input
