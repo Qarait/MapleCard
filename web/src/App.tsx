@@ -1,10 +1,19 @@
 import { useMemo, useState } from "react";
-import { ApiClientError, optimizeShopping, type OptimizeShoppingClient, frontendConfig } from "./api/optimizeClient";
+import {
+  ApiClientError,
+  getOptimizeResponseRequestId,
+  optimizeShopping,
+  type ApiMode,
+  type OptimizeShoppingClient,
+  frontendConfig,
+} from "./api/optimizeClient";
 import { buildDemoFeedbackPayload, formatDemoFeedbackReport } from "./feedback/demoFeedback";
 import type { AnswerResult, ClarificationAnswer, ClarificationQuestion, OptimizeRequest, OptimizeResponse } from "./types/api";
 
 type AppProps = {
   optimizeClient?: OptimizeShoppingClient;
+  frontendMode?: ApiMode;
+  backendBaseUrl?: string;
 };
 
 type ClarificationGroupView = {
@@ -17,6 +26,9 @@ type ClarificationGroupView = {
 
 type ErrorDisplayState = {
   message: string;
+};
+
+type CorrelationState = {
   requestId?: string;
   errorId?: string;
 };
@@ -73,6 +85,22 @@ function formatSelectedAnswerSummary(answer: ClarificationAnswer): string {
   return `${formatAttributeLabel(answer.attributeKey)}: ${answer.value}`;
 }
 
+function getModeHelperText(frontendMode: ApiMode): string {
+  return frontendMode === "fixture"
+    ? "Fixture mode is active for local UI development."
+    : "Backend mode is active. Requests are sent to the MapleCard staging API.";
+}
+
+function looksLikeCommaSeparatedSingleLineList(rawInput: string): boolean {
+  const trimmedInput = rawInput.trim();
+
+  if (!trimmedInput || /\r?\n/.test(trimmedInput)) {
+    return false;
+  }
+
+  return trimmedInput.split(",").filter((part) => part.trim().length > 0).length > 1;
+}
+
 function upsertAnswer(existingAnswers: ClarificationAnswer[], nextAnswer: ClarificationAnswer): ClarificationAnswer[] {
   const withoutSameQuestion = existingAnswers.filter(
     (answer) => !(answer.questionId === nextAnswer.questionId && answer.lineId === nextAnswer.lineId)
@@ -117,18 +145,26 @@ function buildClarificationGroupViews(clarifications: ClarificationQuestion[]): 
   });
 }
 
-export default function App({ optimizeClient = optimizeShopping }: AppProps) {
+export default function App({
+  optimizeClient = optimizeShopping,
+  frontendMode = frontendConfig.apiMode,
+  backendBaseUrl = frontendConfig.apiBaseUrl,
+}: AppProps) {
   const [rawInput, setRawInput] = useState("2% milk\neggs\nbanana\nrice");
   const [submittedRawInput, setSubmittedRawInput] = useState("");
   const [response, setResponse] = useState<OptimizeResponse | null>(null);
   const [clarificationAnswers, setClarificationAnswers] = useState<ClarificationAnswer[]>([]);
   const [lastRequest, setLastRequest] = useState<OptimizeRequest | null>(null);
   const [errorState, setErrorState] = useState<ErrorDisplayState | null>(null);
+  const [correlationState, setCorrelationState] = useState<CorrelationState>({});
   const [isLoading, setIsLoading] = useState(false);
   const [includeRawInputInFeedback, setIncludeRawInputInFeedback] = useState(false);
   const [feedbackCopyStatus, setFeedbackCopyStatus] = useState<"idle" | "copied" | "manual-copy">("idle");
   const [manualFeedbackReport, setManualFeedbackReport] = useState("");
   const hasInput = rawInput.trim().length > 0;
+  const commaSeparatedInputTipVisible = looksLikeCommaSeparatedSingleLineList(rawInput);
+  const submittedCommaSeparatedListReturnedNoItems =
+    response != null && response.items.length === 0 && looksLikeCommaSeparatedSingleLineList(submittedRawInput);
 
   const groupedClarifications = useMemo(
     () => buildClarificationGroupViews(response?.clarifications ?? []),
@@ -153,13 +189,13 @@ export default function App({ optimizeClient = optimizeShopping }: AppProps) {
       buildDemoFeedbackPayload(
         {
           rawInput,
-          frontendMode: frontendConfig.apiMode,
-          backendBaseUrl: frontendConfig.apiBaseUrl,
+          frontendMode,
+          backendBaseUrl,
           response,
           clarificationAnswers,
           currentVisibleErrorMessage: errorState?.message,
-          requestId: errorState?.requestId,
-          errorId: errorState?.errorId,
+          requestId: correlationState.requestId,
+          errorId: correlationState.errorId,
         },
         { includeRawInput: includeRawInputInFeedback }
       )
@@ -187,20 +223,29 @@ export default function App({ optimizeClient = optimizeShopping }: AppProps) {
   async function submitRequest(nextRequest: OptimizeRequest, nextSubmittedInput: string) {
     setIsLoading(true);
     setErrorState(null);
+    setCorrelationState({});
     setLastRequest(nextRequest);
 
     try {
       const nextResponse = await optimizeClient(nextRequest);
       setResponse(nextResponse);
       setSubmittedRawInput(nextSubmittedInput);
+      setCorrelationState({ requestId: getOptimizeResponseRequestId(nextResponse) });
     } catch (error) {
       const message = error instanceof Error ? error.message : "MapleCard could not complete this request right now. Please try again in a moment.";
+      const nextCorrelationState =
+        error instanceof ApiClientError
+          ? {
+              requestId: error.requestId,
+              errorId: error.errorId,
+            }
+          : {};
+
+      setCorrelationState(nextCorrelationState);
       setErrorState(
         error instanceof ApiClientError
           ? {
               message,
-              requestId: error.requestId,
-              errorId: error.errorId,
             }
           : { message }
       );
@@ -243,15 +288,14 @@ export default function App({ optimizeClient = optimizeShopping }: AppProps) {
         <p className="eyebrow">MapleCard mobile-first shopping assistant</p>
         <p className="staging-banner">MapleCard staging demo - uses synthetic inventory and seed catalog data.</p>
         <h1>Build a quick grocery plan that still feels usable on your phone.</h1>
-        <p className="hero-copy">
-          Fixture mode stays the default for UI work and tests. Backend mode is still available for local smoke testing against MapleCard on port 3000, but the UX here now focuses on a cleaner tap-first shopping flow.
-        </p>
+        <p className="hero-copy">Use a short grocery list to test parsing, clarifications, and duplicate-line handling in the mobile flow.</p>
+        <p className="hero-copy">{getModeHelperText(frontendMode)}</p>
         <p className="hero-copy staging-copy">
           Inventory and pricing are not real yet, checkout is not available, and this demo is for validating the shopping-intelligence flow.
         </p>
         <div className="mode-pill-row">
-          <span className="mode-pill">Mode: {frontendConfig.apiMode}</span>
-          <span className="mode-pill">Endpoint: {frontendConfig.apiBaseUrl}/api/optimize</span>
+          <span className="mode-pill">Mode: {frontendMode}</span>
+          <span className="mode-pill">Endpoint: {backendBaseUrl}/api/optimize</span>
         </div>
         <div className="hero-highlights" aria-label="Shopping flow highlights">
           <span className="highlight-pill">Touch-friendly clarifications</span>
@@ -265,7 +309,7 @@ export default function App({ optimizeClient = optimizeShopping }: AppProps) {
           <span className="panel-step">Screen 1</span>
           <h2>Shopping list input</h2>
         </div>
-        <p className="panel-copy">Paste one item per line. MapleCard keeps fixture mode as the default so you can refine the mobile flow without a live backend.</p>
+        <p className="panel-copy">Paste one item per line. {getModeHelperText(frontendMode)}</p>
         <label className="field-label" htmlFor="rawInput">Raw shopping list</label>
         <textarea
           id="rawInput"
@@ -275,6 +319,11 @@ export default function App({ optimizeClient = optimizeShopping }: AppProps) {
           rows={7}
           placeholder="yogurt&#10;coffee"
         />
+        {commaSeparatedInputTipVisible ? (
+          <p className="muted-copy" role="status">
+            Tip: put each item on a new line. Comma-separated lists are not fully supported yet.
+          </p>
+        ) : null}
         <div className="example-row" aria-label="Suggested shopping list examples">
           <span className="example-chip">yogurt</span>
           <span className="example-chip">coffee</span>
@@ -293,11 +342,11 @@ export default function App({ optimizeClient = optimizeShopping }: AppProps) {
         {errorState ? (
           <div className="error-banner" role="alert">
             <p>{errorState.message}</p>
-            {errorState.requestId || errorState.errorId ? (
+            {correlationState.requestId || correlationState.errorId ? (
               <p className="error-correlation">
-                {errorState.requestId ? `Request ID: ${errorState.requestId}` : ""}
-                {errorState.requestId && errorState.errorId ? " · " : ""}
-                {errorState.errorId ? `Error ID: ${errorState.errorId}` : ""}
+                {correlationState.requestId ? `Request ID: ${correlationState.requestId}` : ""}
+                {correlationState.requestId && correlationState.errorId ? " · " : ""}
+                {correlationState.errorId ? `Error ID: ${correlationState.errorId}` : ""}
               </p>
             ) : null}
           </div>
@@ -355,6 +404,12 @@ export default function App({ optimizeClient = optimizeShopping }: AppProps) {
               <span className="panel-step">Screen 2</span>
               <h2>Optimized result summary</h2>
             </div>
+            {submittedCommaSeparatedListReturnedNoItems ? (
+              <div className="inline-state" role="status">
+                <h3>MapleCard did not split that list into separate items.</h3>
+                <p>Tip: put each item on a new line. Comma-separated lists are not fully supported yet.</p>
+              </div>
+            ) : null}
             <div className="summary-strip" aria-label="Optimization status summary">
               <div className="summary-pill"><strong>{response.items.length}</strong><span>items reviewed</span></div>
               <div className="summary-pill"><strong>{appliedAnswerCount}</strong><span>answers resolved</span></div>

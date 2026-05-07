@@ -1,5 +1,5 @@
 import type { ApiMode } from "../api/optimizeClient";
-import type { AnswerResult, ClarificationAnswer, ClarificationQuestion, OptimizeResponse } from "../types/api";
+import type { AnswerResult, ClarificationAnswer, OptimizeResponse } from "../types/api";
 
 export type DemoFeedbackOptions = {
   includeRawInput?: boolean;
@@ -31,6 +31,7 @@ export type DemoFeedbackPayload = {
   answerResultStatuses?: AnswerResult["status"][];
   parsedItemCount: number;
   clarificationQuestionCount: number;
+  duplicateRawLinesPresent: boolean;
   duplicateLineIdsPresent: boolean;
   lastSafeFrontendErrorMessage?: string;
   browserUserAgent?: string;
@@ -74,32 +75,86 @@ function getRawInputLineCount(rawInput: string): number {
   return trimmedInput.length === 0 ? 0 : trimmedInput.split(/\r?\n/).length;
 }
 
-function collectLineIdPresence(
-  rawTextToLineIds: Map<string, Set<string>>,
-  entries: Array<Pick<ClarificationQuestion, "rawText" | "lineId"> | Pick<ClarificationAnswer, "rawText" | "lineId">>
-): void {
-  for (const entry of entries) {
-    if (!entry.lineId) {
+function hasDuplicateShoppingListLines(rawInput: string): boolean {
+  const normalizedLines = rawInput
+    .split(/\r?\n/)
+    .map((line) => line.trim().toLowerCase())
+    .filter((line) => line.length > 0);
+
+  const seenLines = new Set<string>();
+
+  for (const line of normalizedLines) {
+    if (seenLines.has(line)) {
+      return true;
+    }
+
+    seenLines.add(line);
+  }
+
+  return false;
+}
+
+function getNormalizedDuplicateRawLines(rawInput: string): Map<string, number> {
+  const duplicateCounts = new Map<string, number>();
+
+  for (const line of rawInput.split(/\r?\n/)) {
+    const normalizedLine = line.trim().toLowerCase();
+
+    if (!normalizedLine) {
       continue;
     }
 
-    const existingLineIds = rawTextToLineIds.get(entry.rawText) ?? new Set<string>();
-    existingLineIds.add(entry.lineId);
-    rawTextToLineIds.set(entry.rawText, existingLineIds);
+    duplicateCounts.set(normalizedLine, (duplicateCounts.get(normalizedLine) ?? 0) + 1);
+  }
+
+  for (const [line, count] of duplicateCounts.entries()) {
+    if (count < 2) {
+      duplicateCounts.delete(line);
+    }
+  }
+
+  return duplicateCounts;
+}
+
+function collectDistinctLineIdsByRawText(
+  rawTextToLineIds: Map<string, Set<string>>,
+  entries: Array<Pick<ClarificationAnswer, "rawText" | "lineId">>
+): void {
+  for (const entry of entries) {
+    const normalizedRawText = entry.rawText.trim().toLowerCase();
+
+    if (!normalizedRawText || !entry.lineId) {
+      continue;
+    }
+
+    const lineIds = rawTextToLineIds.get(normalizedRawText) ?? new Set<string>();
+    lineIds.add(entry.lineId);
+    rawTextToLineIds.set(normalizedRawText, lineIds);
   }
 }
 
-function hasDuplicateLineIds(
-  response: OptimizeResponse | null,
-  clarificationAnswers: ClarificationAnswer[]
-): boolean {
+function hasDuplicateLineIds(response: OptimizeResponse | null, clarificationAnswers: ClarificationAnswer[], rawInput: string): boolean {
+  const duplicateRawLines = getNormalizedDuplicateRawLines(rawInput);
+
+  if (duplicateRawLines.size === 0) {
+    return false;
+  }
+
   const rawTextToLineIds = new Map<string, Set<string>>();
 
-  collectLineIdPresence(rawTextToLineIds, response?.clarifications ?? []);
-  collectLineIdPresence(rawTextToLineIds, response?.answerResults ?? []);
-  collectLineIdPresence(rawTextToLineIds, clarificationAnswers);
+  collectDistinctLineIdsByRawText(rawTextToLineIds, response?.clarifications ?? []);
+  collectDistinctLineIdsByRawText(rawTextToLineIds, response?.answerResults ?? []);
+  collectDistinctLineIdsByRawText(rawTextToLineIds, clarificationAnswers);
 
-  return Array.from(rawTextToLineIds.values()).some((lineIds) => lineIds.size > 1);
+  for (const [normalizedRawText, duplicateCount] of duplicateRawLines.entries()) {
+    const distinctLineIdCount = rawTextToLineIds.get(normalizedRawText)?.size ?? 0;
+
+    if (distinctLineIdCount > 0 && distinctLineIdCount < duplicateCount) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 export function buildDemoFeedbackPayload(
@@ -121,7 +176,8 @@ export function buildDemoFeedbackPayload(
       : {}),
     parsedItemCount: context.response?.items.length ?? 0,
     clarificationQuestionCount: context.response?.clarifications.length ?? 0,
-    duplicateLineIdsPresent: hasDuplicateLineIds(context.response, context.clarificationAnswers),
+    duplicateRawLinesPresent: hasDuplicateShoppingListLines(context.rawInput),
+    duplicateLineIdsPresent: hasDuplicateLineIds(context.response, context.clarificationAnswers, context.rawInput),
     ...(context.currentVisibleErrorMessage
       ? { lastSafeFrontendErrorMessage: context.currentVisibleErrorMessage }
       : {}),

@@ -19,6 +19,8 @@ database-backed state, or production-scale systems.
 - enter duplicate lines such as `yogurt` and `yogurt` to confirm the questions
   stay separate
 - enter a normal grocery list such as milk, eggs, banana, and rice
+- enter a comma-separated single line such as `milk, eggs, bread, yogurt,
+  cheese` and note whether the helper guidance is clear
 - try an empty input or intentionally incomplete input to see the safe error
   handling and guidance
 - copy a feedback report after a successful or confusing flow
@@ -50,6 +52,9 @@ only when it helps explain the issue.
 4. Click `Copy feedback report`.
 5. If clipboard access is unavailable, copy the manually shown report text.
 
+The copied report should include `requestId` when the backend provides one.
+Structured backend errors may also include `errorId`.
+
 ## How To File A GitHub Demo Feedback Issue
 
 1. Go to https://github.com/Qarait/MapleCard/issues/new/choose
@@ -68,6 +73,21 @@ only when it helps explain the issue.
 - whether the issue felt like a parser problem, clarification problem, frontend
   UX problem, or known limitation
 - whether you intentionally included raw shopping-list text in the report
+- whether the report showed `duplicateRawLinesPresent` for duplicate item lines
+
+## Duplicate-Line Feedback Note
+
+- Use `duplicateRawLinesPresent` to confirm whether the input contained duplicate
+  normalized non-empty lines such as two `yogurt` entries.
+- `duplicateLineIdsPresent` is narrower. It only refers to duplicate generated
+  line IDs, which should usually stay false when MapleCard keeps duplicates
+  separate correctly.
+
+## Current Known Input Limitation
+
+Comma-separated single-line grocery lists are not fully supported yet. The app
+shows a tip for that case, but the most reliable tester flow is still one item
+per line.
 
 ## Reminder About Synthetic Data
 

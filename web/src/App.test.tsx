@@ -34,6 +34,20 @@ describe("MapleCard mobile web scaffold", () => {
     expect(screen.getByText(/running a tester session\? use the tester packet and copy a feedback report after each flow/i)).toBeInTheDocument();
   });
 
+  it("renders fixture-specific helper text in fixture mode", () => {
+    render(<App optimizeClient={vi.fn()} frontendMode="fixture" />);
+
+    expect(screen.getAllByText(/fixture mode is active for local ui development/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/backend mode is active\. requests are sent to the maplecard staging api/i)).not.toBeInTheDocument();
+  });
+
+  it("renders backend-specific helper text in backend mode", () => {
+    render(<App optimizeClient={vi.fn()} frontendMode="backend" />);
+
+    expect(screen.getAllByText(/backend mode is active\. requests are sent to the maplecard staging api/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/fixture mode is active for local ui development/i)).not.toBeInTheDocument();
+  });
+
   it("copies a privacy-safe feedback report by default", async () => {
     const user = userEvent.setup();
     const writeText = vi.fn().mockResolvedValue(undefined);
@@ -125,6 +139,51 @@ describe("MapleCard mobile web scaffold", () => {
     expect(screen.getByText(/winner store/i)).toBeInTheDocument();
     expect(screen.getByText(/freshmart/i)).toBeInTheDocument();
     expect(screen.getByText(/parsed items/i)).toBeInTheDocument();
+  });
+
+  it("shows comma-separated input guidance without blocking submission", async () => {
+    const user = userEvent.setup();
+    const client = vi.fn(async (request: OptimizeRequest) => ({
+      items: [],
+      winner: {
+        provider: "synthetic",
+        retailerKey: "freshmart",
+        subtotal: 12,
+        etaMin: 20,
+        coverageRatio: 1,
+        avgMatchConfidence: 1,
+        score: 0.91,
+        reason: "best fit",
+      },
+      alternatives: [],
+      clarifications: [],
+    }));
+
+    render(<App optimizeClient={client} />);
+
+    const input = screen.getByLabelText(/raw shopping list/i);
+    await user.clear(input);
+    await user.type(input, "milk, eggs, bread, yogurt, cheese");
+
+    expect(screen.getByText(/tip: put each item on a new line\. comma-separated lists are not fully supported yet/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /optimize shopping list/i }));
+
+    await screen.findByRole("heading", { name: /optimized result summary/i });
+    expect(client).toHaveBeenCalledWith({ rawInput: "milk, eggs, bread, yogurt, cheese" });
+    expect(screen.getByText(/maplecard did not split that list into separate items/i)).toBeInTheDocument();
+  });
+
+  it("does not show comma-separated guidance for normal multiline input", async () => {
+    const user = userEvent.setup();
+
+    render(<App optimizeClient={vi.fn(async (request: OptimizeRequest) => getFixtureOptimizeResponse(request))} />);
+
+    const input = screen.getByLabelText(/raw shopping list/i);
+    await user.clear(input);
+    await user.type(input, "milk{enter}eggs{enter}bread");
+
+    expect(screen.queryByText(/comma-separated lists are not fully supported yet/i)).not.toBeInTheDocument();
   });
 
   it("renders clarification questions with user-friendly duplicate-line labels", async () => {
@@ -306,6 +365,60 @@ describe("MapleCard mobile web scaffold", () => {
     expect(writeText.mock.calls[0][0]).toContain(
       '"lastSafeFrontendErrorMessage": "Please check your shopping list and clarification answers, then try again."'
     );
+  });
+
+  it("copies the backend request id from a successful response into the feedback report", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({
+        "x-request-id": "req_success_123",
+      }),
+      json: async () => ({
+        items: [],
+        winner: {
+          provider: "synthetic",
+          retailerKey: "freshmart",
+          subtotal: 12,
+          etaMin: 20,
+          coverageRatio: 1,
+          avgMatchConfidence: 1,
+          score: 0.91,
+          reason: "best fit",
+        },
+        alternatives: [],
+        clarifications: [],
+      }),
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+
+    render(
+      <App
+        optimizeClient={createOptimizeShoppingClient({
+          apiMode: "backend",
+          apiBaseUrl: "https://backend.example.com",
+        })}
+        frontendMode="backend"
+        backendBaseUrl="https://backend.example.com"
+      />
+    );
+
+    const input = screen.getByLabelText(/raw shopping list/i);
+    await user.clear(input);
+    await user.type(input, "milk");
+    await user.click(screen.getByRole("button", { name: /optimize shopping list/i }));
+    await screen.findByRole("heading", { name: /optimized result summary/i });
+    await user.click(screen.getByRole("button", { name: /copy feedback report/i }));
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(writeText.mock.calls[0][0]).toContain('"requestId": "req_success_123"');
   });
 
   it("renders a safe network failure message from backend mode", async () => {

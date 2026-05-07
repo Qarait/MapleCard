@@ -107,8 +107,84 @@ describe("demo feedback helper", () => {
     expect(payload.rawInputIncluded).toBe(true);
     expect(payload.rawInput).toBe("yogurt\nyogurt");
     expect(payload).not.toHaveProperty("rawInputLineCount");
-    expect(payload.duplicateLineIdsPresent).toBe(true);
+    expect(payload.duplicateRawLinesPresent).toBe(true);
+    expect(payload.duplicateLineIdsPresent).toBe(false);
     expect(payload.answerResultStatuses).toEqual(["applied"]);
+  });
+
+  it("reports duplicate shopping-list lines with the clearer field name", () => {
+    const payload = buildDemoFeedbackPayload({
+      rawInput: "yogurt\nYOGURT\ncoffee",
+      frontendMode: "backend",
+      response: null,
+      clarificationAnswers: [],
+      currentUrl: "https://maple-card.vercel.app/",
+      browserUserAgent: "unit-test-agent",
+    });
+
+    expect(payload.duplicateRawLinesPresent).toBe(true);
+    expect(payload.duplicateLineIdsPresent).toBe(false);
+  });
+
+  it("flags duplicate line ids only when duplicate raw lines collapse onto too few line ids", () => {
+    const payload = buildDemoFeedbackPayload({
+      rawInput: "yogurt\nyogurt",
+      frontendMode: "backend",
+      response: {
+        items: [],
+        winner: {
+          provider: "synthetic",
+          retailerKey: "freshmart",
+          subtotal: 12,
+          etaMin: 20,
+          coverageRatio: 1,
+          avgMatchConfidence: 1,
+          score: 0.91,
+          reason: "best fit",
+        },
+        alternatives: [],
+        clarifications: [
+          {
+            id: "q1",
+            lineId: "line_0_yogurt_exact-item",
+            rawText: "yogurt",
+            question: "Which yogurt type do you want?",
+            options: ["regular", "greek"],
+            attributeKey: "type",
+          },
+          {
+            id: "q2",
+            lineId: "line_0_yogurt_exact-item",
+            rawText: "yogurt",
+            question: "Which yogurt flavor do you want?",
+            options: ["plain", "vanilla"],
+            attributeKey: "flavor",
+          },
+        ],
+      },
+      clarificationAnswers: [],
+      currentUrl: "https://maple-card.vercel.app/",
+      browserUserAgent: "unit-test-agent",
+    });
+
+    expect(payload.duplicateRawLinesPresent).toBe(true);
+    expect(payload.duplicateLineIdsPresent).toBe(true);
+  });
+
+  it("formats a readable copy report with the clearer duplicate raw lines field", () => {
+    const report = formatDemoFeedbackReport(
+      buildDemoFeedbackPayload({
+        rawInput: "yogurt\nyogurt",
+        frontendMode: "fixture",
+        response: null,
+        clarificationAnswers: [],
+        currentUrl: "https://maple-card.vercel.app/",
+        browserUserAgent: "unit-test-agent",
+      })
+    );
+
+    expect(report).toContain('"duplicateRawLinesPresent": true');
+    expect(report).toContain('"duplicateLineIdsPresent": false');
   });
 
   it("formats a readable copy report", () => {

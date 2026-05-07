@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiClientError, createOptimizeShoppingClient } from "./optimizeClient";
+import { ApiClientError, createOptimizeShoppingClient, getOptimizeResponseRequestId } from "./optimizeClient";
 
 function createBackendSuccessResponse() {
   return {
@@ -167,6 +167,41 @@ describe("optimize client", () => {
       alternatives: [],
       clarifications: [],
     });
+  });
+
+  it("captures a success request id from the backend response header without changing the response payload", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ...createBackendSuccessResponse(),
+      headers: new Headers({
+        "x-request-id": "req_success_123",
+      }),
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createOptimizeShoppingClient({
+      apiMode: "backend",
+      apiBaseUrl: "https://backend.example.com",
+    });
+
+    const response = await client({ rawInput: "milk" });
+
+    expect(response).toEqual({
+      items: [],
+      winner: {
+        provider: "synthetic",
+        retailerKey: "freshmart",
+        subtotal: 12,
+        etaMin: 25,
+        coverageRatio: 1,
+        avgMatchConfidence: 1,
+        score: 0.9,
+        reason: "Best overall score",
+      },
+      alternatives: [],
+      clarifications: [],
+    });
+    expect(getOptimizeResponseRequestId(response)).toBe("req_success_123");
   });
 
   it("backend mode surfaces safe correlation ids from error responses", async () => {

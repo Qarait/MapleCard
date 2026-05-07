@@ -1,6 +1,16 @@
 import { getFixtureOptimizeResponse } from "../fixtures/optimizeFixtures";
 import type { ApiErrorResponse, OptimizeRequest, OptimizeResponse } from "../types/api";
 
+const optimizeResponseMetadataKey = Symbol("optimizeResponseMetadata");
+
+type OptimizeResponseMetadata = {
+  requestId?: string;
+};
+
+type OptimizeResponseWithMetadata = OptimizeResponse & {
+  [optimizeResponseMetadataKey]?: OptimizeResponseMetadata;
+};
+
 export type ApiMode = "fixture" | "backend";
 
 export type FrontendConfig = {
@@ -62,6 +72,26 @@ function normalizeApiBaseUrl(apiBaseUrl: string): string {
   return apiBaseUrl.replace(/\/+$/, "");
 }
 
+function attachOptimizeResponseMetadata(
+  response: OptimizeResponse,
+  metadata: OptimizeResponseMetadata
+): OptimizeResponse {
+  if (!metadata.requestId) {
+    return response;
+  }
+
+  Object.defineProperty(response, optimizeResponseMetadataKey, {
+    value: metadata,
+    enumerable: false,
+  });
+
+  return response;
+}
+
+export function getOptimizeResponseRequestId(response: OptimizeResponse | null | undefined): string | undefined {
+  return (response as OptimizeResponseWithMetadata | null | undefined)?.[optimizeResponseMetadataKey]?.requestId;
+}
+
 export function resolveFrontendConfig(
   env: Record<string, string | undefined> = import.meta.env as Record<string, string | undefined>
 ): FrontendConfig {
@@ -101,7 +131,11 @@ export function createOptimizeShoppingClient(config: FrontendConfig = frontendCo
       throw await parseApiError(response);
     }
 
-    return (await response.json()) as OptimizeResponse;
+    const parsedResponse = (await response.json()) as OptimizeResponse;
+
+    return attachOptimizeResponseMetadata(parsedResponse, {
+      requestId: response.headers.get("x-request-id") ?? undefined,
+    });
   };
 }
 

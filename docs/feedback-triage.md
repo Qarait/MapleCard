@@ -14,6 +14,7 @@ Start with these fields first:
 - `answerResultStatuses`
 - `parsedItemCount`
 - `clarificationQuestionCount`
+- `duplicateRawLinesPresent`
 - `duplicateLineIdsPresent`
 - `lastSafeFrontendErrorMessage`
 - `rawInputIncluded`
@@ -36,6 +37,30 @@ Then compare the report with the tester's written summary:
   Railway request logs and the related backend response path.
 - Do not expect stack traces or provider secrets in the copied report; those are
   intentionally excluded.
+
+## Duplicate-Line Fields
+
+- `duplicateRawLinesPresent` means the submitted raw input had duplicate
+  normalized non-empty lines such as `yogurt` and `YOGURT`.
+- `duplicateLineIdsPresent` does not mean duplicate raw lines exist. It only
+  indicates that duplicate raw lines appear to share too few generated line IDs.
+- For normal duplicate-line demo verification, prioritize
+  `duplicateRawLinesPresent` and the visible UI grouping before escalating a line-ID bug.
+
+## Comma-Separated Input Guidance
+
+- A single comma-separated grocery line is a known UX gap, not a confirmed parser
+  fix in this sprint.
+- The frontend now warns that comma-separated lists are not fully supported yet.
+- If a tester still gets zero parsed items from one comma-separated line,
+  usually triage it as a `frontend UX issue` or `known limitation` unless there
+  is evidence of a broader parser regression.
+
+## Sprint 32 QA Retest Update
+
+- The suspected P1 count mismatch was not reproduced in the independent QA retest.
+- Do not open or prioritize a count-mismatch issue from that earlier suspicion
+  unless a new reproduction includes a copied report and clear steps.
 
 ## Triage Categories
 

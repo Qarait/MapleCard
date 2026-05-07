@@ -28,6 +28,14 @@ Use this guide when testing the public staging app and sending demo feedback bac
 1. Submit `coffee`.
 2. Confirm coffee-specific clarification questions appear, such as format and roast.
 
+### Comma-Separated Single-Line Input
+
+1. Submit a single line such as `milk, eggs, bread, yogurt, cheese`.
+2. Confirm MapleCard shows the helper tip that comma-separated lists are not
+	fully supported yet.
+3. If the result still returns zero parsed items, copy the feedback report and
+	mention that the list was comma-separated on one line.
+
 ### Duplicate Yogurt Lines
 
 1. Submit:
@@ -52,6 +60,13 @@ yogurt
 2. By default, the report excludes your shopping-list text.
 3. If you want the team to see the exact shopping list, check `Include my shopping-list text in this report` first.
 4. If clipboard access is unavailable, the app will show the full report in a textarea so you can copy it manually.
+
+When available, copied reports now include:
+
+- `requestId` for successful backend requests and safe backend errors
+- `errorId` for structured backend errors
+- `duplicateRawLinesPresent` for duplicate normalized non-empty shopping-list lines
+- `duplicateLineIdsPresent` only when duplicate raw lines appear to reuse too few generated line IDs
 
 ## Why Raw Shopping-List Text Is Excluded By Default
 
@@ -81,3 +96,11 @@ yogurt
 - User or session persistence is not implemented.
 - OpenAI is disabled in current staging.
 - Real retailer data is not connected.
+- Comma-separated single-line grocery lists are not fully supported yet. Put
+	each item on a new line for the most reliable demo behavior.
+
+## Sprint 32 QA Retest Notes
+
+- The suspected P1 count mismatch was not reproduced in the independent QA retest.
+- Treat duplicate raw-line feedback through `duplicateRawLinesPresent`, not by
+	assuming generated line IDs should match.

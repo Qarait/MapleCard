@@ -80,3 +80,34 @@ quality and core product understanding.
 Use the first tester round tracker to measure round success criteria and the
 feedback review checklist plus GitHub label guidance to keep triage decisions
 consistent.
+
+## Current Readiness Snapshot
+
+Verified on 2026-05-07:
+
+- frontend loads successfully at `https://maple-card.vercel.app`
+- backend health check returns healthy at `https://maplecard-production.up.railway.app/healthz`
+- yogurt flow works in current staging
+- duplicate yogurt lines remain separate and target distinct `line_0_yogurt_exact-item`
+   and `line_1_yogurt_exact-item` line IDs
+- feedback report copy works in current staging
+- no P0 demo blocker was found during this verification pass
+
+Sprint 32 follow-up notes:
+
+- the suspected P1 count mismatch was not reproduced in the independent QA retest
+- copied feedback should now include `requestId` when available and `errorId`
+   for structured backend errors
+- duplicate raw-line interpretation should use `duplicateRawLinesPresent`
+   first; `duplicateLineIdsPresent` is only about generated line-ID collisions
+- comma-separated single-line grocery input is still not fully supported and
+   should be tested as guidance quality, not as a solved parser capability
+
+Still pending before broader tester outreach:
+
+- confirm staging banner visibility
+- confirm coffee flow end to end
+- confirm empty-input safe error handling
+- confirm raw input stays excluded by default in copied feedback
+- confirm normal demo usage does not hit rate limiting
+- confirm no frontend-visible secret leakage in responses or copied reports
