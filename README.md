@@ -48,8 +48,11 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 - Staging deployment guidance lives in [docs/staging-deployment.md](docs/staging-deployment.md).
 - Staging observability and request-correlation guidance lives in [docs/staging-observability.md](docs/staging-observability.md).
 - Staging demo walkthrough lives in [docs/staging-demo-script.md](docs/staging-demo-script.md).
+- Controlled tester packet lives in [docs/controlled-tester-packet.md](docs/controlled-tester-packet.md).
+- First tester round plan lives in [docs/first-tester-round-plan.md](docs/first-tester-round-plan.md).
 - Staging tester feedback guidance lives in [docs/staging-feedback-guide.md](docs/staging-feedback-guide.md).
 - Feedback triage workflow lives in [docs/feedback-triage.md](docs/feedback-triage.md).
+- Feedback review checklist lives in [docs/feedback-review-checklist.md](docs/feedback-review-checklist.md).
 - Demo acceptance checklist lives in [docs/demo-acceptance-checklist.md](docs/demo-acceptance-checklist.md).
 - GitHub issue templates live in [.github/ISSUE_TEMPLATE/demo-feedback.yml](.github/ISSUE_TEMPLATE/demo-feedback.yml) and [.github/ISSUE_TEMPLATE/bug-report.yml](.github/ISSUE_TEMPLATE/bug-report.yml).
 - Staging known limitations live in [docs/staging-known-limitations.md](docs/staging-known-limitations.md).
