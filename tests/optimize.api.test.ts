@@ -11,6 +11,31 @@ afterEach(() => {
 });
 
 describe("optimize API validation", () => {
+  it("keeps the default optimize flow unchanged when Kroger env vars are set but disabled", async () => {
+    process.env.MAPLECARD_PARSER_MODE = "deterministic_only";
+    delete process.env.KROGER_PROVIDER_ENABLED;
+    delete process.env.KROGER_CLIENT_ID;
+    delete process.env.KROGER_CLIENT_SECRET;
+
+    const baselineResponse = await request(app)
+      .post("/api/optimize")
+      .send({ rawInput: "2% milk\neggs" });
+
+    process.env.KROGER_PROVIDER_ENABLED = "false";
+    process.env.KROGER_CLIENT_ID = "client-id";
+    process.env.KROGER_CLIENT_SECRET = "client-secret";
+
+    const response = await request(app)
+      .post("/api/optimize")
+      .send({ rawInput: "2% milk\neggs" });
+
+    expect(baselineResponse.status).toBe(200);
+    expect(response.status).toBe(200);
+    expect(Object.keys(baselineResponse.body)).toEqual(["items", "winner", "alternatives", "clarifications"]);
+    expect(Object.keys(response.body)).toEqual(["items", "winner", "alternatives", "clarifications"]);
+    expect(response.body).toEqual(baselineResponse.body);
+  });
+
   it("accepts a valid optimize request", async () => {
     process.env.MAPLECARD_PARSER_MODE = "deterministic_only";
 

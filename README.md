@@ -65,6 +65,7 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 - `VITE_MAPLECARD_API_BASE_URL` should be the backend origin only, for example `https://your-railway-backend-domain`, with no `/api` suffix.
 - Deployment guidance here is for staging readiness only, not production hardening or production automation.
 - Real inventory, real pricing, and retailer integrations are still not part of MapleCard.
+- The real inventory and pricing provider spike plan lives in [docs/real-inventory-pricing-plan.md](docs/real-inventory-pricing-plan.md).
 
 ## Runtime Flow
 
@@ -86,6 +87,12 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 - `seed_bridge` only provides runtime inventory coverage for explicitly mapped core items.
 - Real store inventory, pricing, and ETA data remain synthetic in both modes.
 - `seed_bridge` is a stepping stone toward a real catalog-backed runtime path, not production data.
+
+## Backend Environment Example
+
+- Backend-only env placeholders live in [.env.example](.env.example).
+- Do not commit real backend secret values.
+- Do not place Kroger credentials in frontend env files under `web/`.
 
 ## Provider Reliability
 
