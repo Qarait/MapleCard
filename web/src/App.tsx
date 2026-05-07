@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { ApiClientError, optimizeShopping, type OptimizeShoppingClient, frontendConfig } from "./api/optimizeClient";
+import { buildDemoFeedbackPayload, formatDemoFeedbackReport } from "./feedback/demoFeedback";
 import type { AnswerResult, ClarificationAnswer, ClarificationQuestion, OptimizeRequest, OptimizeResponse } from "./types/api";
 
 type AppProps = {
@@ -124,6 +125,9 @@ export default function App({ optimizeClient = optimizeShopping }: AppProps) {
   const [lastRequest, setLastRequest] = useState<OptimizeRequest | null>(null);
   const [errorState, setErrorState] = useState<ErrorDisplayState | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [includeRawInputInFeedback, setIncludeRawInputInFeedback] = useState(false);
+  const [feedbackCopyStatus, setFeedbackCopyStatus] = useState<"idle" | "copied" | "manual-copy">("idle");
+  const [manualFeedbackReport, setManualFeedbackReport] = useState("");
   const hasInput = rawInput.trim().length > 0;
 
   const groupedClarifications = useMemo(
@@ -143,6 +147,42 @@ export default function App({ optimizeClient = optimizeShopping }: AppProps) {
 
   const appliedAnswerCount = response?.answerResults?.filter((result) => result.status === "applied").length ?? 0;
   const remainingQuestionCount = response?.clarifications.length ?? 0;
+
+  function getFeedbackReport(): string {
+    return formatDemoFeedbackReport(
+      buildDemoFeedbackPayload(
+        {
+          rawInput,
+          frontendMode: frontendConfig.apiMode,
+          backendBaseUrl: frontendConfig.apiBaseUrl,
+          response,
+          clarificationAnswers,
+          currentVisibleErrorMessage: errorState?.message,
+          requestId: errorState?.requestId,
+          errorId: errorState?.errorId,
+        },
+        { includeRawInput: includeRawInputInFeedback }
+      )
+    );
+  }
+
+  async function handleCopyFeedbackReport() {
+    const report = getFeedbackReport();
+
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error("Clipboard API unavailable");
+      }
+
+      await navigator.clipboard.writeText(report);
+      setManualFeedbackReport("");
+      setFeedbackCopyStatus("copied");
+      return;
+    } catch {
+      setManualFeedbackReport(report);
+      setFeedbackCopyStatus("manual-copy");
+    }
+  }
 
   async function submitRequest(nextRequest: OptimizeRequest, nextSubmittedInput: string) {
     setIsLoading(true);
@@ -262,6 +302,38 @@ export default function App({ optimizeClient = optimizeShopping }: AppProps) {
             ) : null}
           </div>
         ) : null}
+        <div className="demo-feedback-panel" aria-label="Demo feedback helper">
+          <div>
+            <p className="card-label">Demo feedback</p>
+            <p className="muted-copy">This copies a report you can paste into a message. It is not sent automatically.</p>
+          </div>
+          <label className="feedback-checkbox">
+            <input
+              type="checkbox"
+              checked={includeRawInputInFeedback}
+              onChange={(event) => setIncludeRawInputInFeedback(event.target.checked)}
+            />
+            <span>Include my shopping-list text in this report</span>
+          </label>
+          <button type="button" className="secondary-button" onClick={handleCopyFeedbackReport}>
+            Copy feedback report
+          </button>
+          {feedbackCopyStatus === "copied" ? (
+            <p className="feedback-copy-status" role="status">Feedback report copied to clipboard.</p>
+          ) : null}
+          {feedbackCopyStatus === "manual-copy" ? (
+            <div className="manual-feedback-block">
+              <p className="feedback-copy-status" role="status">Clipboard unavailable. Copy the report below manually.</p>
+              <textarea
+                aria-label="Feedback report"
+                className="payload-preview feedback-report-preview"
+                readOnly
+                rows={10}
+                value={manualFeedbackReport}
+              />
+            </div>
+          ) : null}
+        </div>
       </section>
 
       {isLoading ? (

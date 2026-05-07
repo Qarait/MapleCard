@@ -28,6 +28,10 @@ textarea {
   font: inherit;
 }
 
+input {
+  font: inherit;
+}
+
 button {
   min-height: 44px;
 }
@@ -242,6 +246,18 @@ button {
   transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
 }
 
+.secondary-button {
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+  cursor: pointer;
+  font-weight: 700;
+  min-height: 44px;
+  padding: 0.8rem 1rem;
+  transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+}
+
 .primary-button {
   background: linear-gradient(135deg, #0f766e, #155e75);
   color: #f8fafc;
@@ -261,7 +277,8 @@ button {
 }
 
 .primary-button:hover,
-.chip-button:hover {
+.chip-button:hover,
+.secondary-button:hover {
   transform: translateY(-1px);
 }
 
@@ -273,10 +290,47 @@ button {
 }
 
 .primary-button:disabled,
-.chip-button:disabled {
+.chip-button:disabled,
+.secondary-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+}
+
+.demo-feedback-panel {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 1rem;
+  background: rgba(248, 250, 252, 0.82);
+}
+
+.feedback-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  color: #334155;
+}
+
+.feedback-checkbox input {
+  margin-top: 0.2rem;
+}
+
+.feedback-copy-status {
+  margin: 0;
+  color: #155e75;
+  font-weight: 700;
+}
+
+.manual-feedback-block {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.feedback-report-preview {
+  min-height: 12rem;
 }
 
 .result-grid,

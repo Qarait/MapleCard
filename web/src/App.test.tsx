@@ -7,6 +7,10 @@ import { getFixtureOptimizeResponse } from "./fixtures/optimizeFixtures";
 import type { OptimizeRequest, OptimizeResponse } from "./types/api";
 
 afterEach(() => {
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: undefined,
+  });
   vi.unstubAllGlobals();
 });
 
@@ -24,6 +28,47 @@ describe("MapleCard mobile web scaffold", () => {
     expect(screen.getByRole("heading", { name: /shopping list input/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/raw shopping list/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /optimize shopping list/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /copy feedback report/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/include my shopping-list text in this report/i)).not.toBeChecked();
+  });
+
+  it("copies a privacy-safe feedback report by default", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+
+    render(<App optimizeClient={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: /copy feedback report/i }));
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(writeText.mock.calls[0][0]).toContain('"rawInputIncluded": false');
+    expect(writeText.mock.calls[0][0]).toContain('"rawInputLineCount": 4');
+    expect(writeText.mock.calls[0][0]).not.toContain('"rawInput":');
+    expect(screen.getByRole("status")).toHaveTextContent(/feedback report copied to clipboard/i);
+  });
+
+  it("shows a manual-copy report when the clipboard API is unavailable", async () => {
+    const user = userEvent.setup();
+
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: undefined,
+    });
+
+    render(<App optimizeClient={vi.fn()} />);
+
+    await user.click(screen.getByLabelText(/include my shopping-list text in this report/i));
+    await user.click(screen.getByRole("button", { name: /copy feedback report/i }));
+
+    expect(screen.getByRole("status")).toHaveTextContent(/clipboard unavailable/i);
+    const manualReport = screen.getByRole("textbox", { name: /feedback report/i });
+    expect((manualReport as HTMLTextAreaElement).value).toContain('"rawInputIncluded": true');
+    expect((manualReport as HTMLTextAreaElement).value).toContain("2% milk");
   });
 
   it("renders an empty input helper state and disables submit", async () => {
@@ -212,6 +257,53 @@ describe("MapleCard mobile web scaffold", () => {
     );
     expect(screen.getByRole("alert")).toHaveTextContent(/request id: req_validation_123/i);
     expect(screen.getByRole("alert")).toHaveTextContent(/error id: err_validation_123/i);
+  });
+
+  it("copies request and error correlation details into the feedback report when available", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      headers: new Headers({
+        "x-request-id": "req_validation_123",
+        "x-error-id": "err_validation_123",
+      }),
+      json: async () => ({
+        error: {
+          code: "invalid_clarification_answer",
+          message: "Each clarification answer must include a non-empty `questionId`.",
+          requestId: "req_validation_123",
+          errorId: "err_validation_123",
+        },
+      }),
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+
+    render(
+      <App
+        optimizeClient={createOptimizeShoppingClient({
+          apiMode: "backend",
+          apiBaseUrl: "http://localhost:3000",
+        })}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /optimize shopping list/i }));
+    await screen.findByRole("alert");
+    await user.click(screen.getByRole("button", { name: /copy feedback report/i }));
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(writeText.mock.calls[0][0]).toContain('"requestId": "req_validation_123"');
+    expect(writeText.mock.calls[0][0]).toContain('"errorId": "err_validation_123"');
+    expect(writeText.mock.calls[0][0]).toContain(
+      '"lastSafeFrontendErrorMessage": "Please check your shopping list and clarification answers, then try again."'
+    );
   });
 
   it("renders a safe network failure message from backend mode", async () => {

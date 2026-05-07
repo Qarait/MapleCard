@@ -24,6 +24,8 @@ yogurt
 9. Explain that `lineId` targeting keeps duplicate grocery lines independently addressable.
 10. Submit `coffee`.
 11. Verify that coffee clarification questions appear, including format and roast.
+12. After each flow, use `Copy feedback report` if you notice a bug, confusing state, or unexpected result.
+13. If the app shows a request or error correlation ID, include it in the pasted feedback report and your note back to the team.
 
 ## Talking Points
 
@@ -31,6 +33,7 @@ yogurt
 - Clarification questions help turn ambiguous shopping text into a structured request.
 - Duplicate lines are intentionally preserved instead of being silently merged.
 - Safe request and error IDs are available for staging debugging if something fails.
+- The feedback helper is copy-only and does not automatically send anything to MapleCard.
 
 ## Known Limitations During Demo
 
