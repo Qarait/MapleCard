@@ -28,13 +28,14 @@ Then compare the report with the tester's written summary:
 ## Using RequestId And ErrorId With Railway And Vercel Logs
 
 - Use `requestId` to search Railway backend logs for the exact optimize request.
-- Use `errorId` to narrow failures to the specific validation, controlled
-	error, or unexpected error path.
+- Use `errorId` to narrow failures to the specific validation, controlled error,
+	or unexpected error path.
 - Use Vercel logs mainly for frontend rendering or deployment issues, not
 	backend request tracing.
 - If the copied report includes a safe frontend error message, compare it with
 	Railway request logs and the related backend response path.
-- Do not expect stack traces or provider secrets in the copied report; those are intentionally excluded.
+- Do not expect stack traces or provider secrets in the copied report; those are
+	intentionally excluded.
 
 ## Triage Categories
 
@@ -57,15 +58,16 @@ Use one primary category per issue:
 
 ## Suggested Priority Levels
 
-- `P0 demo blocker`: breaks the demo entirely or makes staging unusable in
-	front of testers
+- `P0 demo blocker`: breaks the demo entirely or makes staging unusable in front
+	of testers
 - `P1 broken core flow`: blocks yogurt, coffee, duplicate-line, or
 	feedback-copy flows
 - `P2 confusing UX`: core flow works, but users are likely to misunderstand or
 	mistrust the app
-- `P3 catalog/wording improvement`: smaller correctness or clarity
-	improvements with limited demo impact
-- `P4 future enhancement`: useful but not necessary for the current staging/demo loop
+- `P3 catalog/wording improvement`: smaller correctness or clarity improvements
+	with limited demo impact
+- `P4 future enhancement`: useful but not necessary for the current
+	staging/demo loop
 
 ## When To Close As Known Limitation
 
@@ -73,10 +75,12 @@ Close as a known limitation when:
 
 - the issue is already documented in the staging or feedback guides
 - the requested behavior would require real retailer data, checkout,
-  persistence, or production systems that MapleCard does not support yet
-- the report is accurate, but the current staging product intentionally does not solve that case yet
+	persistence, or production systems that MapleCard does not support yet
+- the report is accurate, but the current staging product intentionally does not
+	solve that case yet
 
-When closing as a known limitation, link the relevant docs and explain why the current staging build behaves that way.
+When closing as a known limitation, link the relevant docs and explain why the
+current staging build behaves that way.
 
 ## When To Create A Follow-Up Sprint Task
 
@@ -84,9 +88,10 @@ Create a follow-up sprint task when:
 
 - the issue repeats across testers or flows
 - the issue affects a core demo path
-- the issue weakens confidence in the shopping-intelligence flow even if it
-	does not crash
+- the issue weakens confidence in the shopping-intelligence flow even if it does
+	not crash
 - the issue is not already a documented limitation
 - the fix is bounded enough to fit a sprint slice
 
-Prefer a sprint task instead of an open-ended issue when the next action is already clear and implementation-ready.
+Prefer a sprint task instead of an open-ended issue when the next action is
+already clear and implementation-ready.
