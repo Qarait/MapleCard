@@ -31,7 +31,7 @@ describe("MapleCard mobile web scaffold", () => {
     expect(screen.getByRole("button", { name: /copy feedback report/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/include my shopping-list text in this report/i)).not.toBeChecked();
     expect(screen.getByText(/paste this report into a maplecard demo feedback issue/i)).toBeInTheDocument();
-    expect(screen.getByText(/use the tester packet before sharing feedback/i)).toBeInTheDocument();
+    expect(screen.getByText(/running a tester session\? use the tester packet and copy a feedback report after each flow/i)).toBeInTheDocument();
   });
 
   it("copies a privacy-safe feedback report by default", async () => {

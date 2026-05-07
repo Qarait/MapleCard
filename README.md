@@ -50,9 +50,14 @@ MapleCard is an Express + TypeScript shopping optimization backend.
 - Staging demo walkthrough lives in [docs/staging-demo-script.md](docs/staging-demo-script.md).
 - Controlled tester packet lives in [docs/controlled-tester-packet.md](docs/controlled-tester-packet.md).
 - First tester round plan lives in [docs/first-tester-round-plan.md](docs/first-tester-round-plan.md).
+- Tester session log template lives in [docs/tester-session-log-template.md](docs/tester-session-log-template.md).
+- Tester invite script lives in [docs/tester-invite-script.md](docs/tester-invite-script.md).
 - Staging tester feedback guidance lives in [docs/staging-feedback-guide.md](docs/staging-feedback-guide.md).
 - Feedback triage workflow lives in [docs/feedback-triage.md](docs/feedback-triage.md).
 - Feedback review checklist lives in [docs/feedback-review-checklist.md](docs/feedback-review-checklist.md).
+- Post-session debrief template lives in [docs/post-session-debrief-template.md](docs/post-session-debrief-template.md).
+- First tester round tracker lives in [docs/first-tester-round-tracker.md](docs/first-tester-round-tracker.md).
+- GitHub label guidance lives in [docs/github-labels.md](docs/github-labels.md).
 - Demo acceptance checklist lives in [docs/demo-acceptance-checklist.md](docs/demo-acceptance-checklist.md).
 - GitHub issue templates live in [.github/ISSUE_TEMPLATE/demo-feedback.yml](.github/ISSUE_TEMPLATE/demo-feedback.yml) and [.github/ISSUE_TEMPLATE/bug-report.yml](.github/ISSUE_TEMPLATE/bug-report.yml).
 - Staging known limitations live in [docs/staging-known-limitations.md](docs/staging-known-limitations.md).

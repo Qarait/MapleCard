@@ -18,11 +18,15 @@
 ## Suggested Session Structure
 
 1. Give the tester the controlled tester packet.
+2. Use the tester invite script to keep outreach consistent before the session.
 2. Ask them to read the short product description and limitations.
-3. Have them run the five target flows in sequence.
-4. Ask them to copy a feedback report for at least one successful flow and one
+3. Track each session in the tester session log template and the first tester
+   round tracker.
+4. Have them run the five target flows in sequence.
+5. Ask them to copy a feedback report for at least one successful flow and one
    confusing or broken flow.
-5. Capture any verbal reactions that do not fit cleanly into the copied report.
+6. Capture any verbal reactions that do not fit cleanly into the copied report,
+   then summarize the session with the post-session debrief template.
 
 ## What Success Looks Like
 
@@ -72,3 +76,7 @@ instead of leaving it as isolated feedback.
 If a report is valid but mostly caused by synthetic data or missing real-world
 systems, close it as a known limitation and keep the next sprint focused on demo
 quality and core product understanding.
+
+Use the first tester round tracker to measure round success criteria and the
+feedback review checklist plus GitHub label guidance to keep triage decisions
+consistent.

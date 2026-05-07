@@ -43,6 +43,7 @@ only when it helps explain the issue.
 ## How To Copy A Feedback Report
 
 1. Run a MapleCard flow in the staging app.
+2. Use the current staging frontend URL: https://maple-card.vercel.app
 2. Scroll to the `Demo feedback` panel.
 3. Leave `Include my shopping-list text in this report` unchecked unless raw
    input is necessary for the report.
@@ -56,6 +57,7 @@ only when it helps explain the issue.
 3. Paste the copied feedback report into the issue.
 4. Add a short written summary of what you tried and what felt wrong,
    confusing, or unexpectedly good.
+5. Include request or error IDs from the copied report when available.
 
 ## What To Include Manually
 
